@@ -114,21 +114,33 @@ func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	workers := s.registry.List()
-	online, offline, sessions := 0, 0, 0
-	for _, wk := range workers {
-		if wk.Online {
-			online++
-		} else {
-			offline++
-		}
-		sessions += len(wk.Sessions)
+	dashTmpl.Execute(w, nil)
+}
+
+func (s *server) handleSessionPage(w http.ResponseWriter, r *http.Request) {
+	rest := strings.TrimPrefix(r.URL.Path, "/session/")
+	parts := strings.SplitN(rest, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		http.NotFound(w, r)
+		return
 	}
-	dashTmpl.Execute(w, map[string]any{
-		"Workers":  workers,
-		"Online":   online,
-		"Offline":  offline,
-		"Sessions": sessions,
-		"Version":  version,
-	})
+	workerID, sessionName := parts[0], parts[1]
+
+	worker, ok := s.registry.Get(workerID)
+	if !ok {
+		http.Error(w, "worker not found", 404)
+		return
+	}
+
+	status := "stopped"
+	for _, sess := range worker.Sessions {
+		if sess.Name == sessionName {
+			status = sess.Status
+			break
+		}
+	}
+
+	info := wsInfoForSession(worker.URL, sessionName)
+	data := newSessionData(workerID, worker.Label, sessionName, status, info["ws_url"])
+	sessionTmpl.Execute(w, data)
 }
