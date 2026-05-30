@@ -1,0 +1,12 @@
+services:
+  dispatch:
+    build: .
+    container_name: dispatch
+    ports:
+      - "8888:8888"
+    volumes:
+      - dispatch-config:/root/.config/dispatch
+    restart: unless-stopped
+
+volumes:
+  dispatch-config:
