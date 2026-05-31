@@ -42,7 +42,6 @@ func (s *server) handleWorkerDetail(w http.ResponseWriter, r *http.Request) {
 // handleWorkerProxy forwards worker actions: spawn, kill, restart, resume, output.
 // URL pattern: /api/workers/{id}/{action}[/{name}]
 func (s *server) handleWorkerProxy(w http.ResponseWriter, r *http.Request) {
-	// strip /api/workers/
 	rest := strings.TrimPrefix(r.URL.Path, "/api/workers/")
 	parts := strings.SplitN(rest, "/", 2)
 	if len(parts) < 2 {
@@ -51,23 +50,18 @@ func (s *server) handleWorkerProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	id, tail := parts[0], parts[1]
 
-	workerURL, ok := s.registry.WorkerURL(id)
+	workerURL, workerToken, ok := s.registry.WorkerInfo(id)
 	if !ok {
 		jsonError(w, "worker not found", 404)
 		return
 	}
 
-	// Map hub path tail → worker API v1 path
-	// e.g. "spawn" → "/api/v1/spawn"
-	//      "kill/swift-fox" → "/api/v1/kill/swift-fox"
 	workerPath := "/api/v1/" + tail
-
-	// Append query string if present
 	if r.URL.RawQuery != "" {
 		workerPath += "?" + r.URL.RawQuery
 	}
 
-	forwardToWorker(w, r, workerURL, workerPath)
+	forwardToWorker(w, r, workerURL, workerToken, workerPath)
 }
 
 // handleWSInfo returns the direct WebSocket URL for a session.

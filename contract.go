@@ -10,6 +10,7 @@ import "time"
 type Registration struct {
 	Label        string    `json:"label"`
 	URL          string    `json:"url"`
+	WorkerToken  string    `json:"worker_token"`
 	Version      string    `json:"version,omitempty"`
 	Capabilities []string  `json:"capabilities,omitempty"` // e.g. ["claude","pi","terminal"]
 	Sessions     []Session `json:"sessions"`
@@ -52,6 +53,7 @@ type Worker struct {
 	ID           string
 	Label        string
 	URL          string
+	Token        string // worker's own auth token — used by hub when calling back
 	Version      string
 	Capabilities []string
 	Sessions     []Session

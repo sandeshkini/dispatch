@@ -40,6 +40,7 @@ func (r *Registry) Register(reg Registration) *Worker {
 
 	w.Label = reg.Label
 	w.URL = reg.URL
+	w.Token = reg.WorkerToken
 	w.Version = reg.Version
 	w.Capabilities = reg.Capabilities
 	w.Sessions = reg.Sessions
@@ -73,16 +74,26 @@ func (r *Registry) Get(id string) (workerView, bool) {
 	return w.view(), true
 }
 
-// WorkerURL returns just the base URL for a worker — used by proxy.
+// WorkerURL returns the base URL for a worker — used by proxy.
 func (r *Registry) WorkerURL(id string) (string, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
 	w, ok := r.workers[id]
 	if !ok {
 		return "", false
 	}
-	return w.URL, ok
+	return w.URL, true
+}
+
+// WorkerInfo returns the URL and auth token for a worker.
+func (r *Registry) WorkerInfo(id string) (url, token string, ok bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	w, exists := r.workers[id]
+	if !exists {
+		return "", "", false
+	}
+	return w.URL, w.Token, true
 }
 
 // MarkOffline sweeps workers that haven't sent a heartbeat recently.

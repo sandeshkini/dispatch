@@ -19,8 +19,9 @@ var proxyClient = &http.Client{
 
 // forwardToWorker proxies a request to a worker and writes the response back.
 // workerURL is the worker's base URL (e.g. "http://100.x.x.x:7777").
+// workerToken is the worker's own auth token (sent as Bearer).
 // path is the worker-side path (e.g. "/api/v1/kill/swift-fox").
-func forwardToWorker(w http.ResponseWriter, r *http.Request, workerURL, path string) {
+func forwardToWorker(w http.ResponseWriter, r *http.Request, workerURL, workerToken, path string) {
 	target := strings.TrimRight(workerURL, "/") + path
 
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
@@ -34,6 +35,9 @@ func forwardToWorker(w http.ResponseWriter, r *http.Request, workerURL, path str
 	req.ContentLength = r.ContentLength
 	if ct := r.Header.Get("Content-Type"); ct != "" {
 		req.Header.Set("Content-Type", ct)
+	}
+	if workerToken != "" {
+		req.Header.Set("Authorization", "Bearer "+workerToken)
 	}
 
 	resp, err := proxyClient.Do(req)

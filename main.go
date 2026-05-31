@@ -114,13 +114,19 @@ func main() {
 
 func authMiddleware(token string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// allow /health unauthenticated for uptime checks
+		// /health is always open — used for uptime checks
 		if r.URL.Path == "/health" {
 			next.ServeHTTP(w, r)
 			return
 		}
-		auth := r.Header.Get("Authorization")
-		if strings.TrimPrefix(auth, "Bearer ") != token {
+		// dashboard and static pages are open when no token configured
+		if token == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if bearer != token {
+			w.Header().Set("WWW-Authenticate", "Bearer")
 			http.Error(w, "unauthorized", 401)
 			return
 		}
