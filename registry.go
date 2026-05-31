@@ -38,12 +38,17 @@ func (r *Registry) Register(reg Registration) string {
 		r.workers[id] = w
 	}
 
+	sessions := make([]Session, len(reg.Sessions))
+	copy(sessions, reg.Sessions)
+	caps := make([]string, len(reg.Capabilities))
+	copy(caps, reg.Capabilities)
+
 	w.Label = reg.Label
 	w.URL = reg.URL
 	w.Token = reg.WorkerToken
 	w.Version = reg.Version
-	w.Capabilities = reg.Capabilities
-	w.Sessions = reg.Sessions
+	w.Capabilities = caps
+	w.Sessions = sessions
 	w.LastSeen = now
 	w.Online = true
 
