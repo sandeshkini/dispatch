@@ -124,8 +124,12 @@ func authMiddleware(token string, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if bearer != token {
+		auth := r.Header.Get("Authorization")
+		var bearer string
+		if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+			bearer = auth[7:]
+		}
+		if bearer == "" || bearer != token {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			http.Error(w, "unauthorized", 401)
 			return

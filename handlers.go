@@ -20,8 +20,8 @@ func (s *server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "url required", 400)
 		return
 	}
-	worker := s.registry.Register(reg)
-	jsonOK(w, map[string]string{"id": worker.ID, "status": "registered"})
+	id := s.registry.Register(reg)
+	jsonOK(w, map[string]string{"id": id, "status": "registered"})
 }
 
 func (s *server) handleWorkers(w http.ResponseWriter, r *http.Request) {

@@ -75,14 +75,11 @@ type workerView struct {
 }
 
 func (w *Worker) view() workerView {
-	sessions := w.Sessions
-	if sessions == nil {
-		sessions = []Session{}
-	}
-	caps := w.Capabilities
-	if caps == nil {
-		caps = []string{}
-	}
+	// deep copy slices to avoid sharing backing arrays with the live Worker
+	sessions := make([]Session, len(w.Sessions))
+	copy(sessions, w.Sessions)
+	caps := make([]string, len(w.Capabilities))
+	copy(caps, w.Capabilities)
 	return workerView{
 		ID:           w.ID,
 		Label:        w.Label,

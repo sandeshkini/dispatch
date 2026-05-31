@@ -47,7 +47,11 @@ func forwardToWorker(w http.ResponseWriter, r *http.Request, workerURL, workerTo
 	}
 	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", "application/json")
+	for k, vals := range resp.Header {
+		for _, v := range vals {
+			w.Header().Add(k, v)
+		}
+	}
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
 }
