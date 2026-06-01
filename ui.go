@@ -36,64 +36,59 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
 html,body{min-height:100%;background:var(--bg);color:var(--text);
   font-family:var(--mono);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 
-.wrap{max-width:960px;margin:0 auto;padding:1.25rem 1rem 4rem}
+.wrap{max-width:900px;margin:0 auto;padding:1.25rem 1rem 4rem}
 
 .title{display:flex;align-items:center;justify-content:space-between;
-  font-size:1rem;font-weight:700;color:var(--text);
-  margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
-.title-label{letter-spacing:0.02em}
+  font-size:1rem;font-weight:700;margin-bottom:2rem;
+  padding-bottom:1rem;border-bottom:1px solid var(--border)}
 
-.grid{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+/* worker section */
+.worker{margin-bottom:2rem}
+.worker-hdr{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:.6rem}
+.worker-meta{display:flex;align-items:center;gap:.5rem}
+.wlabel{font-size:.75rem;font-weight:600;color:var(--text-secondary);
+  text-transform:uppercase;letter-spacing:.07em}
 
-.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  overflow:hidden;transition:border-color .15s;
-  animation:cardin .4s cubic-bezier(.16,1,.3,1) both}
-.card:hover{border-color:var(--border-hi)}
-@keyframes cardin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-.card-head{display:flex;align-items:center;justify-content:space-between;
-  padding:.75rem 1rem;border-bottom:1px solid var(--border)}
-.card-meta{display:flex;align-items:center;gap:.5rem;min-width:0}
-.wlabel{font-size:.9rem;font-weight:700;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
-
-.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 .dot.live{background:var(--green);animation:pdot 2s ease-in-out infinite}
 .dot.off{background:var(--text-secondary)}
 .dot.run{background:var(--green)}
-.dot.stop{background:rgba(255,255,255,0.2)}
+.dot.stop{background:rgba(255,255,255,0.15)}
 @keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
 
-.btn-spawn{font-size:.78rem;font-weight:700;padding:4px 10px;border-radius:6px;border:none;
+.btn-spawn{font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:6px;border:none;
   background:var(--accent-dim);color:var(--accent);cursor:pointer;
-  font-family:var(--mono);transition:background .12s;white-space:nowrap;flex-shrink:0}
-.btn-spawn:hover:not(:disabled){background:rgba(88,166,255,0.25)}
+  font-family:var(--mono);transition:background .12s;white-space:nowrap}
+.btn-spawn:hover:not(:disabled){background:rgba(88,166,255,.25)}
 .btn-spawn:disabled{opacity:.3;cursor:not-allowed}
 
-.card-body{padding:.5rem .75rem;display:flex;flex-direction:column;gap:4px;
-  max-height:280px;overflow-y:auto}
-.card-body::-webkit-scrollbar{width:2px}
-.card-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+/* session rows */
+.sess-row{display:flex;align-items:center;gap:1rem;
+  padding:.7rem .9rem;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);
+  margin-bottom:.4rem;transition:border-color .12s;cursor:default;
+  animation:cardin .35s cubic-bezier(.16,1,.3,1) both}
+.sess-row:hover{border-color:var(--border-hi)}
+@keyframes cardin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-.sess-row{display:flex;align-items:center;gap:.5rem;padding:6px 6px;
-  border-radius:6px;transition:background .1s;cursor:default}
-.sess-row:hover{background:rgba(255,255,255,.04)}
-.sess-info{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
-.sess-name{font-size:.85rem;font-weight:600;
+.sess-left{display:flex;align-items:center;gap:.6rem;flex-shrink:0;width:140px}
+.sess-name{font-size:.9rem;font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sess-summary{font-size:.72rem;color:var(--text-secondary);line-height:1.4}
+.sess-summary{flex:1;font-size:.78rem;color:var(--text-secondary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 
-.sess-btns{display:flex;gap:3px;opacity:0;transition:opacity .12s;flex-shrink:0}
+.sess-btns{display:flex;gap:4px;opacity:0;transition:opacity .12s;flex-shrink:0}
 .sess-row:hover .sess-btns{opacity:1}
-.ibtn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border);
+.ibtn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);
   background:none;color:var(--text-secondary);display:flex;align-items:center;
   justify-content:center;cursor:pointer;transition:all .12s}
 .ibtn:hover{background:var(--surface);border-color:var(--border-hi);color:var(--text)}
 .ibtn.danger:hover{color:var(--red);border-color:rgba(248,81,73,.3);background:var(--red-dim)}
 .ibtn.open-btn:hover{color:var(--accent);border-color:rgba(88,166,255,.3);background:var(--accent-dim)}
-.ibtn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ibtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-.no-sess{font-size:.78rem;color:var(--text-secondary);padding:.75rem 0;text-align:center}
+.no-sess{font-size:.8rem;color:var(--text-secondary);padding:.5rem 0}
 
 .empty{display:flex;flex-direction:column;align-items:center;gap:.75rem;
   padding:4rem 2rem;text-align:center;
@@ -192,40 +187,34 @@ function render(workers) {
       'Set <code>hub_url</code> in a worker\'s config to register.</div></div>';
     return;
   }
-  var html = '<div class="grid">';
+  var html = '';
   for (var i = 0; i < workers.length; i++) {
     var w = workers[i];
     var sessions = w.sessions || [];
     var caps = w.capabilities || [];
-    var delay = (i * 0.05) + 's';
 
-    html += '<div class="card" style="animation-delay:' + delay + '">';
-
-    /* head */
-    html += '<div class="card-head">';
-    html += '<div class="card-meta">';
+    html += '<div class="worker">';
+    html += '<div class="worker-hdr">';
+    html += '<div class="worker-meta">';
     html += '<span class="dot ' + (w.online ? 'live' : 'off') + '"></span>';
     html += '<span class="wlabel">' + esc(w.label) + '</span>';
     html += '</div>';
     var dis = w.online ? '' : ' disabled';
     var capStr = caps.join(',');
     html += '<button class="btn-spawn"' + dis + ' onclick="openModal(\'' + w.id + '\',\'' +
-      esc(w.label).replace(/'/g,"\\'") + '\',\'' + capStr + '\')">+ New</button>';
+      esc(w.label).replace(/'/g,"\\'") + '\',\'' + capStr + '\')">+ New session</button>';
     html += '</div>';
 
-    /* body */
-    html += '<div class="card-body">';
     if (sessions.length) {
       for (var j = 0; j < sessions.length; j++) {
         var s = sessions[j];
-        html += '<div class="sess-row">';
+        var sdelay = (j * 0.04) + 's';
+        html += '<div class="sess-row" style="animation-delay:' + sdelay + '">';
+        html += '<div class="sess-left">';
         html += '<span class="dot ' + (s.status === 'running' ? 'run' : 'stop') + '"></span>';
-        html += '<div class="sess-info">';
         html += '<span class="sess-name">' + esc(s.name) + '</span>';
-        if (s.summary) {
-          html += '<span class="sess-summary">' + esc(s.summary) + '</span>';
-        }
         html += '</div>';
+        html += '<span class="sess-summary">' + esc(s.summary || s.dir || '') + '</span>';
         html += '<div class="sess-btns">';
         html += '<button class="ibtn open-btn" title="Open" onclick="openSession(\'' + w.id + '\',\'' + esc(s.name) + '\')">';
         html += '<svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><path d="M10 14L21 3"/><path d="M21 3H9"/><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5"/></svg>';
@@ -239,11 +228,9 @@ function render(workers) {
     } else {
       html += '<div class="no-sess">No sessions</div>';
     }
-    html += '</div>';
 
-    html += '</div>'; /* card */
+    html += '</div>';
   }
-  html += '</div>';
   el.innerHTML = html;
 }
 
