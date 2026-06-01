@@ -121,6 +121,8 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
   border:1px solid var(--border);padding:1px 5px;border-radius:3px}
 .sess-dir{font-size:.72rem;color:var(--text-muted);font-family:var(--mono);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess-summary{font-size:.72rem;color:var(--text-dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic}
 
 .sess-btns{display:flex;gap:4px;opacity:0;transition:opacity .15s;flex-shrink:0}
 .sess-row:hover .sess-btns{opacity:1}
@@ -306,6 +308,7 @@ function render(workers) {
         html += '<span class="sess-cli">' + esc(s.cli || 'terminal') + '</span>';
         html += '</div>';
         html += '<span class="sess-dir">' + esc(s.dir || '') + '</span>';
+        if (s.summary) html += '<span class="sess-summary">' + esc(s.summary) + '</span>';
         html += '</div>';
         html += '<div class="sess-btns">';
         html += '<button class="ibtn open-btn" title="Open" onclick="openSession(\'' + w.id + '\',\'' + esc(s.name) + '\')">';
