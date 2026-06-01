@@ -40,6 +40,95 @@ Config file is auto-created at `~/.config/dispatch/config.json`:
 
 ---
 
+## Deploying dispatch (Docker)
+
+```bash
+git clone https://github.com/sandeshkini/dispatch
+cd dispatch
+docker compose up -d
+```
+
+Config lives in a Docker volume at `/root/.config/dispatch/config.json`. Write it with:
+
+```bash
+docker exec dispatch sh -c 'mkdir -p /root/.config/dispatch && cat > /root/.config/dispatch/config.json' << 'EOF'
+{
+  "port": 8888,
+  "auth_token": "your-secret-token-here",
+  "registration_host": "register.dispatch.yourdomain.com"
+}
+EOF
+docker compose restart
+```
+
+| Field | Description |
+|-------|-------------|
+| `auth_token` | Required on `/api/register` — set the same value as `hub_auth_token` on each worker |
+| `registration_host` | Hostname of the public registration resource (Pangolin). Requests from this host are restricted to `/api/register` and `/health` only — the dashboard is not exposed through it |
+
+### Pangolin setup
+
+Create **two** Pangolin resources pointing to the same port 8888:
+
+| Resource | SSO | Purpose |
+|----------|-----|---------|
+| `dispatch.yourdomain.com` | **On** | Dashboard — browser access, SSO protected |
+| `register.dispatch.yourdomain.com` | **Off** (public) | Worker registration only — `auth_token` is the gate |
+
+Add both as Cloudflare A records pointing to your VPS IP.
+
+---
+
+## Connecting a new worker
+
+On the machine you want to add:
+
+1. **Install claude-monitor** (the worker):
+   ```bash
+   git clone https://github.com/sandeshkini/claude-monitor
+   cd claude-monitor
+   go build -o ~/.local/bin/claude-monitor .
+   ```
+
+2. **Configure** `~/.config/claude-monitor/config.json`:
+   ```json
+   {
+     "port": 7777,
+     "hub_url":        "https://register.dispatch.yourdomain.com",
+     "hub_auth_token": "<your dispatch auth_token>",
+     "worker_url":     "https://agent.thismachine.yourdomain.com",
+     "allowed_dirs":   ["~"]
+   }
+   ```
+
+3. **Pangolin** — add a resource for this worker:
+   - Hostname: `agent.thismachine.yourdomain.com`
+   - Target: `localhost:7777`
+   - SSO: **public** (browsers need direct WebSocket access; `/api/v1/` is token-protected by the worker itself)
+
+4. **Systemd service** at `~/.config/systemd/user/claude-monitor.service`:
+   ```ini
+   [Unit]
+   Description=Claude Monitor
+   After=network-online.target
+
+   [Service]
+   ExecStart=%h/.local/bin/claude-monitor
+   Restart=always
+   RestartSec=5
+
+   [Install]
+   WantedBy=default.target
+   ```
+   ```bash
+   systemctl --user enable --now claude-monitor
+   loginctl enable-linger $USER
+   ```
+
+The worker appears in the dispatch dashboard within 30 seconds.
+
+---
+
 ## Worker registration
 
 Workers register by POSTing to `/api/register`. If you're building a compatible worker, start a heartbeat loop on startup:
