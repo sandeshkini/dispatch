@@ -15,8 +15,9 @@ import (
 const version = "0.1.0"
 
 type Config struct {
-	Port      int    `json:"port"`
-	AuthToken string `json:"auth_token,omitempty"`
+	Port             int    `json:"port"`
+	AuthToken        string `json:"auth_token,omitempty"`
+	RegistrationHost string `json:"registration_host,omitempty"` // e.g. "register.dispatch.kingdomofluna.com"
 }
 
 type server struct {
@@ -71,12 +72,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// auth middleware
-	var handler http.Handler = mux
-	if cfg.AuthToken != "" {
-		handler = authMiddleware(cfg.AuthToken, mux)
-	}
-
 	// worker registration (called by workers)
 	mux.HandleFunc("/api/register", srv.handleRegister)
 
@@ -107,32 +102,35 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	log.Printf("dispatch v%s listening on %s", version, addr)
-	if err := http.ListenAndServe(addr, handler); err != nil {
+	if err := http.ListenAndServe(addr, srv.hostMiddleware(mux)); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func authMiddleware(token string, next http.Handler) http.Handler {
+// hostMiddleware gates requests based on which hostname they arrive on.
+// When RegistrationHost is set, requests from that host are restricted to
+// /api/register and /health only — the dashboard and worker API are not
+// accessible through the public registration URL.
+func (s *server) hostMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// /health is always open — used for uptime checks
-		if r.URL.Path == "/health" {
+		if s.config.RegistrationHost == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
-		// dashboard and static pages are open when no token configured
-		if token == "" {
-			next.ServeHTTP(w, r)
-			return
+		// Traefik sets X-Forwarded-Host; fall back to Host header.
+		host := r.Header.Get("X-Forwarded-Host")
+		if host == "" {
+			host = r.Host
 		}
-		auth := r.Header.Get("Authorization")
-		var bearer string
-		if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
-			bearer = auth[7:]
+		// Strip port if present.
+		if i := strings.LastIndex(host, ":"); i >= 0 {
+			host = host[:i]
 		}
-		if bearer == "" || bearer != token {
-			w.Header().Set("WWW-Authenticate", "Bearer")
-			http.Error(w, "unauthorized", 401)
-			return
+		if host == s.config.RegistrationHost {
+			if r.URL.Path != "/api/register" && r.URL.Path != "/health" {
+				http.NotFound(w, r)
+				return
+			}
 		}
 		next.ServeHTTP(w, r)
 	})

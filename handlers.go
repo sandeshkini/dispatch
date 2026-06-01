@@ -11,6 +11,14 @@ func (s *server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "POST only", 405)
 		return
 	}
+	if s.config.AuthToken != "" {
+		bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if bearer != s.config.AuthToken {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", 401)
+			return
+		}
+	}
 	var reg Registration
 	if err := json.NewDecoder(r.Body).Decode(&reg); err != nil {
 		jsonError(w, "invalid JSON: "+err.Error(), 400)
