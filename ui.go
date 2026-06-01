@@ -287,8 +287,41 @@ function render(workers) {
   renderSessions();
 }
 
+// fetchWorkerSessions fetches live session state directly from a worker's API.
+// Falls back to the heartbeat-cached sessions if the worker is unreachable.
+function fetchWorkerSessions(w) {
+  if (!w.online) return Promise.resolve(w);
+  return fetch('/api/workers/' + encodeURIComponent(w.id) + '/instances')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(sessions) {
+      if (!sessions) return w;
+      return Object.assign({}, w, {sessions: sessions});
+    })
+    .catch(function() { return w; });
+}
+
+// load fetches worker metadata (online/offline) then fetches live sessions
+// from each online worker's API in parallel. Heartbeat data is only used
+// for online/offline status and worker metadata, never for session state.
 function load() {
-  fetch('/api/workers').then(function(r){ return r.json(); }).then(function(d){ render(d||[]); }).catch(function(){});
+  fetch('/api/workers')
+    .then(function(r) { return r.json(); })
+    .then(function(workers) {
+      if (!workers || !workers.length) { render([]); return; }
+      return Promise.all(workers.map(fetchWorkerSessions));
+    })
+    .then(function(workers) { if (workers) render(workers); })
+    .catch(function(){});
+}
+
+// refreshWorker re-fetches live sessions for a single worker and re-renders.
+function refreshWorker(wid) {
+  var w = lastWorkers.find(function(wk) { return wk.id === wid; });
+  if (!w) return;
+  fetchWorkerSessions(w).then(function(updated) {
+    lastWorkers = lastWorkers.map(function(wk) { return wk.id === wid ? updated : wk; });
+    renderSessions();
+  });
 }
 
 function openSession(wid, name) {
@@ -301,33 +334,32 @@ function doAction(action, wid, name) {
     .then(function(r) {
       return r.json().then(function(d) {
         if (!r.ok) {
-          // Kill on an already-stopped session: treat as success and update UI.
+          // Kill on already-stopped: not an error, just refresh to get real state.
           if (action === 'kill' && d.message && d.message.indexOf('not running') !== -1) {
-            lastWorkers.forEach(function(w) {
-              if (w.id !== wid) return;
-              (w.sessions || []).forEach(function(s) { if (s.name === name) s.status = 'stopped'; });
-            });
-            renderSessions(); setTimeout(load, 3000); return;
+            refreshWorker(wid); return;
           }
           alert(d.error || d.message || 'Action failed'); return;
         }
-        // Optimistic update: reflect the change immediately without waiting for
-        // the next 30s heartbeat. Background reload syncs real state after 3s.
-        lastWorkers.forEach(function(w) {
-          if (w.id !== wid) return;
-          if (action === 'delete') {
-            w.sessions = (w.sessions || []).filter(function(s) { return s.name !== name; });
-          } else {
-            (w.sessions || []).forEach(function(s) {
+        // Optimistic update so the UI responds instantly, then fetch real state.
+        if (action === 'delete') {
+          lastWorkers.forEach(function(w) {
+            if (w.id === wid) w.sessions = (w.sessions||[]).filter(function(s){ return s.name !== name; });
+          });
+          renderSessions();
+        } else {
+          lastWorkers.forEach(function(w) {
+            if (w.id !== wid) return;
+            (w.sessions||[]).forEach(function(s) {
               if (s.name !== name) return;
               if (action === 'kill')    s.status = 'stopped';
               if (action === 'resume')  s.status = 'running';
               if (action === 'restart') s.status = 'running';
             });
-          }
-        });
-        renderSessions();
-        setTimeout(load, 3000);
+          });
+          renderSessions();
+        }
+        // Fetch real state from worker after a short delay for the action to land.
+        setTimeout(function() { refreshWorker(wid); }, 800);
       });
     }).catch(function(){});
 }
@@ -511,13 +543,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
       <div class="menu-wrap">
         <button class="menu-btn" id="menu-btn" onclick="toggleMenu()">&#8943;</button>
         <div class="dropdown" id="dropdown">
-          {{if eq .SessionStatus "running"}}
-          <button class="ditem" onclick="sessionAction('kill');closeMenu()">Kill session</button>
-          <button class="ditem" onclick="sessionAction('restart');closeMenu()">Restart</button>
-          {{else}}
-          <button class="ditem" onclick="sessionAction('resume');closeMenu()">Resume</button>
-          <button class="ditem red" onclick="sessionAction('delete');closeMenu()">Delete</button>
-          {{end}}
+          <button class="ditem" id="dd-kill"    onclick="sessionAction('kill');closeMenu()"    style="display:{{if eq .SessionStatus "running"}}block{{else}}none{{end}}">Kill session</button>
+          <button class="ditem" id="dd-restart" onclick="sessionAction('restart');closeMenu()" style="display:{{if eq .SessionStatus "running"}}block{{else}}none{{end}}">Restart</button>
+          <button class="ditem" id="dd-resume"  onclick="sessionAction('resume');closeMenu()"  style="display:{{if eq .SessionStatus "running"}}none{{else}}block{{end}}">Resume</button>
+          <button class="ditem red" id="dd-delete" onclick="sessionAction('delete');closeMenu()" style="display:{{if eq .SessionStatus "running"}}none{{else}}block{{end}}">Delete</button>
           <div class="dsep"></div>
           <button class="ditem" onclick="sendCtrlC();closeMenu()">Interrupt (^C)</button>
           <button class="ditem" onclick="document.getElementById('file-input').click();closeMenu()">Attach file</button>
@@ -676,9 +705,45 @@ function connect() {
 }
 
 connect();
+fetchSessionStatus();
+
+// updateSessionButtons shows/hides the kill/restart vs resume/delete buttons
+// based on actual session status. Called on load and after every action.
+function updateSessionButtons(status) {
+  var running = status === 'running';
+  document.getElementById('dd-kill').style.display    = running ? 'block' : 'none';
+  document.getElementById('dd-restart').style.display = running ? 'block' : 'none';
+  document.getElementById('dd-resume').style.display  = running ? 'none'  : 'block';
+  document.getElementById('dd-delete').style.display  = running ? 'none'  : 'block';
+}
+
+// fetchSessionStatus fetches live session state from the worker API and
+// updates the dropdown buttons. Called on page load so the buttons always
+// reflect actual state, not the stale status baked into the template.
+function fetchSessionStatus() {
+  fetch('/api/workers/' + encodeURIComponent(WORKER_ID) + '/instances')
+    .then(function(r) { return r.json(); })
+    .then(function(sessions) {
+      var sess = sessions.find(function(s) { return s.name === SESS_NAME; });
+      if (!sess) return;
+      INIT_STATUS = sess.status;
+      updateSessionButtons(sess.status);
+    })
+    .catch(function(){});
+}
 
 function sessionAction(action) {
   fetch('/api/workers/' + encodeURIComponent(WORKER_ID) + '/' + action + '/' + encodeURIComponent(SESS_NAME), {method:'POST'})
+    .then(function(r) {
+      return r.json().then(function(d) {
+        if (!r.ok) { alert(d.error || d.message || action + ' failed'); return; }
+        if (action === 'delete') { location.href = '/'; return; }
+        var newStatus = (action === 'kill') ? 'stopped' : 'running';
+        INIT_STATUS = newStatus;
+        updateSessionButtons(newStatus);
+        if (action === 'kill') setBadge('stopped');
+      });
+    })
     .catch(function(){});
 }
 
