@@ -298,7 +298,28 @@ function openSession(wid, name) {
 function doAction(action, wid, name) {
   closeAllMenus();
   fetch('/api/workers/' + encodeURIComponent(wid) + '/' + action + '/' + encodeURIComponent(name), {method:'POST'})
-    .then(function(){ setTimeout(load, 600); }).catch(function(){});
+    .then(function(r) {
+      return r.json().then(function(d) {
+        if (!r.ok) { alert(d.error || 'Action failed'); return; }
+        // Optimistic update: reflect the change immediately without waiting for
+        // the next 30s heartbeat. Background reload syncs real state after 3s.
+        lastWorkers.forEach(function(w) {
+          if (w.id !== wid) return;
+          if (action === 'delete') {
+            w.sessions = (w.sessions || []).filter(function(s) { return s.name !== name; });
+          } else {
+            (w.sessions || []).forEach(function(s) {
+              if (s.name !== name) return;
+              if (action === 'kill')    s.status = 'stopped';
+              if (action === 'resume')  s.status = 'running';
+              if (action === 'restart') s.status = 'running';
+            });
+          }
+        });
+        renderSessions();
+        setTimeout(load, 3000);
+      });
+    }).catch(function(){});
 }
 
 function toggleMenu(mid, e) {
