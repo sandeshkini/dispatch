@@ -565,9 +565,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/lib/addon-fit.js"></script>
 <script>
-var WS_URL     = {{.WSURL | js}};
-var WORKER_ID  = {{.WorkerID | js}};
-var SESS_NAME  = {{.SessionName | js}};
+var WS_URL      = {{.WSURL | js}};
+var WS_TOKEN    = {{.WorkerToken | js}};
+var WORKER_ID   = {{.WorkerID | js}};
+var SESS_NAME   = {{.SessionName | js}};
 var INIT_STATUS = {{.SessionStatus | js}};
 
 var term = new Terminal({
@@ -663,6 +664,7 @@ function connect() {
   ws = new WebSocket(WS_URL);
   ws.binaryType = 'arraybuffer';
   ws.onopen = function() {
+    if (WS_TOKEN) ws.send(JSON.stringify({type: 'auth', token: WS_TOKEN}));
     setBadge('live');
     sendResize();
     term.focus();
@@ -711,16 +713,19 @@ type sessionData struct {
 	SessionName   string
 	SessionStatus string
 	WSURL         template.JS
+	WorkerToken   template.JS
 }
 
-// newSessionData builds sessionData with a properly typed WSURL.
-func newSessionData(workerID, workerLabel, sessionName, sessionStatus, wsURL string) sessionData {
+// newSessionData builds sessionData with properly typed JS values.
+func newSessionData(workerID, workerLabel, sessionName, sessionStatus, wsURL, workerToken string) sessionData {
 	b, _ := json.Marshal(wsURL)
+	tb, _ := json.Marshal(workerToken)
 	return sessionData{
 		WorkerID:      workerID,
 		WorkerLabel:   workerLabel,
 		SessionName:   sessionName,
 		SessionStatus: sessionStatus,
 		WSURL:         template.JS(b),
+		WorkerToken:   template.JS(tb),
 	}
 }

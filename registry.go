@@ -101,6 +101,16 @@ func (r *Registry) WorkerInfo(id string) (url, token string, ok bool) {
 	return w.URL, w.Token, true
 }
 
+// Token returns the stored auth token for a worker regardless of online status.
+func (r *Registry) Token(id string) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if w, ok := r.workers[id]; ok {
+		return w.Token
+	}
+	return ""
+}
+
 // MarkOffline marks stale workers offline and evicts workers unseen for over an hour.
 func (r *Registry) MarkOffline() {
 	r.mu.Lock()
