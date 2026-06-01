@@ -384,22 +384,20 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .layout{display:flex;flex-direction:column;height:100%;height:100dvh}
 
 /* topbar */
-.topbar{flex-shrink:0;display:flex;align-items:center;gap:.5rem;
+.topbar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
   padding:calc(var(--sat) + 8px) calc(var(--sar) + 12px) 8px calc(var(--sal) + 6px);
   background:rgba(13,17,23,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-bottom:1px solid var(--border);z-index:10}
+.topbar-left{display:flex;align-items:center;gap:.5rem;flex:1;min-width:0;overflow:hidden}
+.topbar-right{display:flex;align-items:center;gap:.4rem;flex-shrink:0}
 .back{color:var(--accent);background:transparent;border:none;
   font-size:1.5rem;cursor:pointer;padding:.25rem .6rem .25rem 0;
   display:flex;align-items:center;line-height:1;text-decoration:none;
   transition:opacity .15s;flex-shrink:0}
 .back:hover{opacity:.7}
-.topbar-center{flex:1;display:flex;align-items:center;justify-content:center;
-  gap:.4rem;min-width:0;overflow:hidden}
-.session-label{font-size:.85rem;font-weight:700;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-label{font-size:.85rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .session-sep{color:var(--text-muted);flex-shrink:0}
 .session-sub{font-size:.85rem;color:var(--text-muted);white-space:nowrap;flex-shrink:0}
-.topbar-right{display:flex;align-items:center;gap:.4rem;flex-shrink:0}
 .badge{font-size:.66rem;font-weight:600;letter-spacing:.04em;
   padding:2px 8px;border-radius:999px;flex-shrink:0}
 .badge-live{background:var(--green-dim);color:var(--green);border:1px solid rgba(52,211,153,.25)}
@@ -451,14 +449,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 <div class="layout">
 
   <div class="topbar">
-    <a class="back" href="/" title="Back">&#8592;</a>
-    <div class="topbar-center">
+    <div class="topbar-left">
+      <a class="back" href="/" title="Back">&#8592;</a>
       <span class="session-label">{{.SessionName}}</span>
       <span class="session-sep">·</span>
       <span class="session-sub">{{.WorkerLabel}}</span>
+      <span class="badge badge-connecting" id="badge">connecting</span>
     </div>
     <div class="topbar-right">
-      <span class="badge badge-connecting" id="badge">connecting</span>
       <div class="menu-wrap">
         <button class="menu-btn" id="menu-btn" onclick="toggleMenu()">&#8943;</button>
         <div class="dropdown" id="dropdown">
