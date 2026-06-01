@@ -81,8 +81,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);
 .sess-info{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
 .sess-name{font-size:.85rem;font-weight:600;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sess-summary{font-size:.72rem;color:var(--text-secondary);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess-summary{font-size:.72rem;color:var(--text-secondary);line-height:1.4}
 
 .sess-btns{display:flex;gap:3px;opacity:0;transition:opacity .12s;flex-shrink:0}
 .sess-row:hover .sess-btns{opacity:1}
@@ -330,7 +329,7 @@ document.addEventListener('keydown', function(e){
 });
 
 load();
-setInterval(load, 5000);
+setInterval(load, 30000);
 
 fetch('/health').then(function(r){ return r.json(); }).then(function(){ }).catch(function(){});
 </script>
