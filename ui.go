@@ -10,148 +10,157 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0d1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>dispatch</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0d1117;
-  --surface:rgba(255,255,255,0.04);
-  --border:rgba(255,255,255,0.1);
-  --border-hi:rgba(255,255,255,0.2);
-  --accent:#58a6ff;
-  --accent-dim:rgba(88,166,255,0.15);
-  --green:#3fb950;
-  --green-dim:rgba(63,185,80,0.15);
-  --red:#f85149;
-  --red-dim:rgba(248,81,73,0.15);
-  --text:#e2e8f0;
-  --text-secondary:#8b949e;
-  --mono:'JetBrains Mono','SF Mono','Consolas',monospace;
-}
-html,body{min-height:100%;background:var(--bg);color:var(--text);
-  font-family:var(--mono);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  :root {
+    --bg:#0d1117; --surface:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.1);
+    --border-hi:rgba(255,255,255,0.2); --accent:#58a6ff; --accent-dim:rgba(88,166,255,0.15);
+    --green:#3fb950; --green-dim:rgba(63,185,80,0.15); --red:#f85149;
+    --red-dim:rgba(248,81,73,0.15); --amber:#d29922;
+    --text:#e2e8f0; --text-secondary:#8b949e;
+    --mono:'JetBrains Mono','SF Mono','Consolas',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--mono);background:var(--bg);color:var(--text);
+    padding:1.25rem 1rem 6rem;-webkit-text-size-adjust:100%;min-height:100vh}
 
-.wrap{max-width:900px;margin:0 auto;padding:1.25rem 1rem 4rem}
+  .title{display:flex;align-items:center;justify-content:space-between;
+    font-size:1rem;font-weight:700;margin-bottom:2rem;
+    padding-bottom:1rem;border-bottom:1px solid var(--border)}
 
-.title{display:flex;align-items:center;justify-content:space-between;
-  font-size:1rem;font-weight:700;margin-bottom:2rem;
-  padding-bottom:1rem;border-bottom:1px solid var(--border)}
+  .machine-tabs{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap}
+  .machine-tab{display:flex;align-items:center;gap:.3rem;padding:.2rem .6rem;
+    border-radius:20px;font-size:.75rem;font-family:var(--mono);font-weight:500;
+    border:1px solid var(--border);background:none;color:var(--text-secondary);
+    cursor:pointer;transition:all .15s;white-space:nowrap}
+  .machine-tab:hover{border-color:var(--accent);color:var(--accent)}
+  .machine-tab.active{background:var(--accent);border-color:var(--accent);color:#0d1117}
+  .machine-tab.active .status-dot{background:rgba(0,0,0,.4)}
+  .status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--border)}
+  .status-dot.online{background:var(--green)}
+  .status-dot.offline{background:var(--red)}
 
-/* worker section */
-.worker{margin-bottom:2rem}
-.worker-hdr{display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:.6rem}
-.worker-meta{display:flex;align-items:center;gap:.5rem}
-.wlabel{font-size:.75rem;font-weight:600;color:var(--text-secondary);
-  text-transform:uppercase;letter-spacing:.07em}
+  .toolbar{display:flex;align-items:center;margin-bottom:2rem}
+  .new-btn{margin-left:auto;padding:.5rem 1.1rem;border-radius:8px;
+    font-size:.85rem;font-weight:700;font-family:var(--mono);cursor:pointer;
+    background:var(--accent-dim);color:var(--accent);
+    border:1px solid rgba(88,166,255,.3);transition:background .15s}
+  .new-btn:hover{background:rgba(88,166,255,.25)}
 
-.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.dot.live{background:var(--green);animation:pdot 2s ease-in-out infinite}
-.dot.off{background:var(--text-secondary)}
-.dot.run{background:var(--green)}
-.dot.stop{background:rgba(255,255,255,0.15)}
-@keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
+  .section-label{font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;
+    letter-spacing:.1em;margin-bottom:.75rem;font-weight:500}
 
-.btn-spawn{font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:6px;border:none;
-  background:var(--accent-dim);color:var(--accent);cursor:pointer;
-  font-family:var(--mono);transition:background .12s;white-space:nowrap}
-.btn-spawn:hover:not(:disabled){background:rgba(88,166,255,.25)}
-.btn-spawn:disabled{opacity:.3;cursor:not-allowed}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    margin-bottom:.75rem;transition:border-color .15s;position:relative;overflow:visible;
+    animation:cardIn .4s cubic-bezier(.16,1,.3,1) both}
+  .card:hover{border-color:var(--border-hi)}
+  @keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-/* session rows */
-.sess-row{display:flex;align-items:center;gap:1rem;
-  padding:.7rem .9rem;border-radius:8px;
-  background:var(--surface);border:1px solid var(--border);
-  margin-bottom:.4rem;transition:border-color .12s;cursor:default;
-  animation:cardin .35s cubic-bezier(.16,1,.3,1) both}
-.sess-row:hover{border-color:var(--border-hi)}
-@keyframes cardin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .card-body{padding:.9rem 1rem .75rem;cursor:pointer;border-radius:8px 8px 0 0;transition:background .12s}
+  .card-body:hover{background:rgba(255,255,255,.03)}
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem}
+  .card-name{font-weight:700;font-size:.95rem;letter-spacing:.01em}
+  .card-cli{font-size:.75rem;color:var(--text-secondary)}
+  .card-summary{font-size:.75rem;color:var(--text-secondary);margin-top:.35rem}
 
-.sess-left{display:flex;align-items:center;gap:.6rem;flex-shrink:0;width:140px}
-.sess-name{font-size:.9rem;font-weight:700;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sess-summary{flex:1;font-size:.78rem;color:var(--text-secondary);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .badge{font-size:.72rem;padding:.18rem .6rem;border-radius:9999px;font-weight:600;
+    letter-spacing:.02em;display:inline-flex;align-items:center;gap:.3rem}
+  .badge-running{background:var(--green-dim);color:var(--green)}
+  .badge-running::before{content:'';width:5px;height:5px;background:var(--green);
+    border-radius:50%;animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .badge-stopped{background:rgba(255,255,255,.06);color:var(--text-secondary)}
 
-.sess-btns{display:flex;gap:4px;opacity:0;transition:opacity .12s;flex-shrink:0}
-.sess-row:hover .sess-btns{opacity:1}
-.ibtn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);
-  background:none;color:var(--text-secondary);display:flex;align-items:center;
-  justify-content:center;cursor:pointer;transition:all .12s}
-.ibtn:hover{background:var(--surface);border-color:var(--border-hi);color:var(--text)}
-.ibtn.danger:hover{color:var(--red);border-color:rgba(248,81,73,.3);background:var(--red-dim)}
-.ibtn.open-btn:hover{color:var(--accent);border-color:rgba(88,166,255,.3);background:var(--accent-dim)}
-.ibtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .card-footer{display:flex;justify-content:flex-end;align-items:center;
+    padding:.25rem .6rem;border-top:1px solid var(--border);position:relative}
+  .more-btn{background:none;border:1px solid transparent;color:var(--text-secondary);
+    font-family:var(--mono);font-size:.72rem;font-weight:600;letter-spacing:.04em;
+    cursor:pointer;padding:.2rem .5rem;border-radius:4px;transition:all .12s}
+  .more-btn:hover{background:rgba(255,255,255,.06);border-color:var(--border);color:var(--text)}
 
-.no-sess{font-size:.8rem;color:var(--text-secondary);padding:.5rem 0}
+  .card-menu{position:absolute;bottom:calc(100% + 4px);right:0;min-width:185px;
+    background:#1c2128;border:1px solid var(--border-hi);border-radius:8px;
+    padding:.3rem;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.6);display:none}
+  .card-menu.open{display:block}
+  .menu-item{display:block;width:100%;padding:.5rem .7rem;border-radius:5px;
+    font-size:.8rem;font-weight:600;font-family:var(--mono);cursor:pointer;
+    border:none;background:none;text-align:left;transition:background .1s;color:var(--text)}
+  .menu-item:hover{background:rgba(255,255,255,.06)}
+  .menu-item.kill{color:var(--red)}
+  .menu-item.resume{color:var(--green)}
+  .menu-item.restart{color:var(--amber)}
+  .menu-divider{height:1px;background:var(--border);margin:.25rem .3rem}
+  .menu-path{padding:.4rem .7rem;font-size:.7rem;color:var(--text-secondary);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-.empty{display:flex;flex-direction:column;align-items:center;gap:.75rem;
-  padding:4rem 2rem;text-align:center;
-  border:1px dashed var(--border);border-radius:8px;margin:2rem 0}
-.empty-lbl{font-size:.85rem;color:var(--text-secondary);line-height:1.7}
-.empty-lbl code{font-size:.8rem;background:var(--surface);
-  padding:1px 6px;border-radius:4px;color:var(--text)}
+  .empty{color:var(--text-secondary);text-align:center;padding:3rem 0;
+    font-size:.85rem;border:1px dashed var(--border);border-radius:6px}
 
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  z-index:100;display:flex;align-items:center;justify-content:center;
-  opacity:0;pointer-events:none;transition:opacity .2s}
-.overlay.show{opacity:1;pointer-events:auto}
-.modal{background:#161b22;border:1px solid var(--border-hi);border-radius:8px;
-  width:100%;max-width:400px;overflow:hidden;
-  transform:translateY(16px);transition:transform .2s cubic-bezier(.16,1,.3,1)}
-.overlay.show .modal{transform:translateY(0)}
-.modal-head{display:flex;align-items:center;justify-content:space-between;
-  padding:.85rem 1.1rem;border-bottom:1px solid var(--border)}
-.modal-title{font-size:.9rem;font-weight:700}
-.modal-close{background:none;border:none;color:var(--text-secondary);
-  font-size:1.2rem;cursor:pointer;line-height:1;padding:2px 4px;transition:color .12s}
-.modal-close:hover{color:var(--text)}
-.modal-body{padding:1.1rem;display:flex;flex-direction:column;gap:.85rem}
-.fg{display:flex;flex-direction:column;gap:.35rem}
-.fg label{font-size:.7rem;font-weight:600;color:var(--text-secondary);
-  text-transform:uppercase;letter-spacing:.06em}
-.fg select,.fg input{background:rgba(255,255,255,.06);border:1px solid var(--border);
-  color:var(--text);font-family:var(--mono);font-size:.85rem;
-  padding:.45rem .65rem;border-radius:6px;outline:none;
-  transition:border-color .15s;width:100%}
-.fg select:focus,.fg input:focus{border-color:rgba(88,166,255,.5)}
-.fg select{cursor:pointer;appearance:none}
-.modal-foot{padding:.75rem 1.1rem;border-top:1px solid var(--border);
-  display:flex;justify-content:flex-end;gap:.5rem}
-.btn{font-size:.82rem;font-weight:700;padding:.45rem 1rem;font-family:var(--mono);
-  border-radius:6px;border:none;cursor:pointer;transition:all .12s}
-.btn-cancel{background:rgba(255,255,255,.06);color:var(--text-secondary);border:1px solid var(--border)}
-.btn-cancel:hover{color:var(--text)}
-.btn-ok{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.3)}
-.btn-ok:hover:not(:disabled){background:rgba(88,166,255,.25)}
-.btn-ok:disabled{opacity:.4;cursor:not-allowed}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);
+    backdrop-filter:blur(10px);z-index:100;display:flex;align-items:center;
+    justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+  .overlay.show{opacity:1;pointer-events:auto}
+  .modal{background:#161b22;border:1px solid var(--border-hi);border-radius:8px;
+    width:100%;max-width:400px;overflow:hidden;
+    transform:translateY(16px);transition:transform .2s cubic-bezier(.16,1,.3,1)}
+  .overlay.show .modal{transform:translateY(0)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;
+    padding:.85rem 1.1rem;border-bottom:1px solid var(--border)}
+  .modal-title{font-size:.9rem;font-weight:700}
+  .modal-close{background:none;border:none;color:var(--text-secondary);
+    font-size:1.2rem;cursor:pointer;padding:2px 4px;transition:color .12s}
+  .modal-close:hover{color:var(--text)}
+  .modal-body{padding:1.1rem;display:flex;flex-direction:column;gap:.85rem}
+  .fg{display:flex;flex-direction:column;gap:.35rem}
+  .fg label{font-size:.7rem;font-weight:600;color:var(--text-secondary);
+    text-transform:uppercase;letter-spacing:.06em}
+  .fg select,.fg input{background:rgba(255,255,255,.06);border:1px solid var(--border);
+    color:var(--text);font-family:var(--mono);font-size:.85rem;
+    padding:.45rem .65rem;border-radius:6px;outline:none;transition:border-color .15s;width:100%}
+  .fg select:focus,.fg input:focus{border-color:rgba(88,166,255,.5)}
+  .fg select{cursor:pointer;appearance:none}
+  .modal-foot{padding:.75rem 1.1rem;border-top:1px solid var(--border);
+    display:flex;justify-content:flex-end;gap:.5rem}
+  .btn{font-size:.82rem;font-weight:700;padding:.45rem 1rem;font-family:var(--mono);
+    border-radius:6px;border:none;cursor:pointer;transition:all .12s}
+  .btn-cancel{background:rgba(255,255,255,.06);color:var(--text-secondary);border:1px solid var(--border)}
+  .btn-cancel:hover{color:var(--text)}
+  .btn-ok{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.3)}
+  .btn-ok:hover:not(:disabled){background:rgba(88,166,255,.25)}
+  .btn-ok:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <div class="title">
-    <span class="title-label">dispatch</span>
+<div class="title">
+  <div class="machine-tabs" id="machine-tabs">
+    <button class="machine-tab active" id="tab-all" onclick="setTab('all')">All</button>
   </div>
-
-  <div id="main"></div>
-
 </div>
 
-<!-- spawn modal -->
-<div class="overlay" id="overlay" onclick="overlayClick(event)">
+<div class="toolbar">
+  <div class="section-label">Sessions</div>
+  <button class="new-btn" onclick="openSpawn()">+ New session</button>
+</div>
+
+<div id="instances"></div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-head">
-      <span class="modal-title" id="modal-title">New session</span>
+      <span class="modal-title">New session</span>
       <button class="modal-close" onclick="closeModal()">&#x2715;</button>
     </div>
     <div class="modal-body">
+      <div class="fg" id="m-machine-fg">
+        <label>Machine</label>
+        <select id="m-machine" onchange="updateCaps()"></select>
+      </div>
       <div class="fg">
         <label>Tool</label>
         <select id="m-cli"></select>
@@ -173,152 +182,174 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);
 </div>
 
 <script>
-var _wid = '';
+var lastWorkers = [];
+var activeTab = 'all';
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function render(workers) {
-  var el = document.getElementById('main');
-  if (!workers.length) {
-    el.innerHTML = '<div class="empty">' +
-      '<div class="empty-lbl">No workers registered yet.<br>' +
-      'Set <code>hub_url</code> in a worker\'s config to register.</div></div>';
+function setTab(id) {
+  activeTab = id;
+  document.querySelectorAll('.machine-tab').forEach(function(t){ t.classList.remove('active'); });
+  var tab = document.getElementById('tab-' + id);
+  if (tab) tab.classList.add('active');
+  renderSessions();
+}
+
+function updateTabs(workers) {
+  var tabs = document.getElementById('machine-tabs');
+  tabs.querySelectorAll('.machine-tab:not(#tab-all)').forEach(function(t){ t.remove(); });
+  workers.forEach(function(w) {
+    var btn = document.createElement('button');
+    btn.id = 'tab-' + w.id;
+    btn.className = 'machine-tab' + (activeTab === w.id ? ' active' : '');
+    var dot = '<span class="status-dot ' + (w.online ? 'online' : 'offline') + '"></span>';
+    btn.innerHTML = dot + esc(w.label);
+    btn.onclick = function(){ setTab(w.id); };
+    tabs.appendChild(btn);
+  });
+  document.getElementById('tab-all').className = 'machine-tab' + (activeTab === 'all' ? ' active' : '');
+}
+
+function renderSessions() {
+  var el = document.getElementById('instances');
+  var items = [];
+  if (activeTab === 'all') {
+    lastWorkers.forEach(function(w) {
+      (w.sessions || []).forEach(function(s) {
+        items.push({s:s, wid:w.id, wlabel:w.label});
+      });
+    });
+  } else {
+    var w = lastWorkers.find(function(wk){ return wk.id === activeTab; });
+    if (w) (w.sessions || []).forEach(function(s){ items.push({s:s, wid:w.id, wlabel:w.label}); });
+  }
+
+  if (!items.length) {
+    el.innerHTML = '<div class="empty">No sessions</div>';
     return;
   }
+
   var html = '';
-  for (var i = 0; i < workers.length; i++) {
-    var w = workers[i];
-    var sessions = w.sessions || [];
-    var caps = w.capabilities || [];
-
-    html += '<div class="worker">';
-    html += '<div class="worker-hdr">';
-    html += '<div class="worker-meta">';
-    html += '<span class="dot ' + (w.online ? 'live' : 'off') + '"></span>';
-    html += '<span class="wlabel">' + esc(w.label) + '</span>';
+  items.forEach(function(item, i) {
+    var s = item.s, wid = item.wid;
+    var running = s.status === 'running';
+    var cliText = activeTab === 'all' ? (esc(s.cli||'terminal') + ' · ' + esc(item.wlabel)) : esc(s.cli||'terminal');
+    var mid = esc(s.name) + '-' + esc(wid);
+    html += '<div class="card" style="animation-delay:' + (i*0.05) + 's">';
+    html += '<div class="card-body" onclick="openSession(\'' + esc(wid) + '\',\'' + esc(s.name) + '\')">';
+    html += '<div class="card-header">';
+    html += '<span class="card-name">' + esc(s.name) + '</span>';
+    html += '<span class="badge badge-' + s.status + '">' + s.status + '</span>';
     html += '</div>';
-    var dis = w.online ? '' : ' disabled';
-    var capStr = caps.join(',');
-    html += '<button class="btn-spawn"' + dis + ' onclick="openModal(\'' + w.id + '\',\'' +
-      esc(w.label).replace(/'/g,"\\'") + '\',\'' + capStr + '\')">+ New session</button>';
+    html += '<div class="card-cli">' + cliText + '</div>';
+    if (s.summary) html += '<div class="card-summary">' + esc(s.summary) + '</div>';
     html += '</div>';
-
-    if (sessions.length) {
-      for (var j = 0; j < sessions.length; j++) {
-        var s = sessions[j];
-        var sdelay = (j * 0.04) + 's';
-        html += '<div class="sess-row" style="animation-delay:' + sdelay + '">';
-        html += '<div class="sess-left">';
-        html += '<span class="dot ' + (s.status === 'running' ? 'run' : 'stop') + '"></span>';
-        html += '<span class="sess-name">' + esc(s.name) + '</span>';
-        html += '</div>';
-        html += '<span class="sess-summary">' + esc(s.summary || s.dir || '') + '</span>';
-        html += '<div class="sess-btns">';
-        html += '<button class="ibtn open-btn" title="Open" onclick="openSession(\'' + w.id + '\',\'' + esc(s.name) + '\')">';
-        html += '<svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><path d="M10 14L21 3"/><path d="M21 3H9"/><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5"/></svg>';
-        html += '</button>';
-        html += '<button class="ibtn danger" title="Kill" onclick="killSession(\'' + w.id + '\',\'' + esc(s.name) + '\')">';
-        html += '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-        html += '</button>';
-        html += '</div>';
-        html += '</div>';
-      }
+    html += '<div class="card-footer">';
+    html += '<button class="more-btn" onclick="toggleMenu(\'' + mid + '\',event)">More</button>';
+    html += '<div class="card-menu" id="menu-' + mid + '">';
+    if (running) {
+      html += '<button class="menu-item kill" onclick="doAction(\'kill\',\'' + esc(wid) + '\',\'' + esc(s.name) + '\')">Kill session</button>';
+      html += '<button class="menu-item restart" onclick="doAction(\'restart\',\'' + esc(wid) + '\',\'' + esc(s.name) + '\')">Restart</button>';
     } else {
-      html += '<div class="no-sess">No sessions</div>';
+      html += '<button class="menu-item resume" onclick="doAction(\'resume\',\'' + esc(wid) + '\',\'' + esc(s.name) + '\')">Resume</button>';
     }
-
-    html += '</div>';
-  }
+    if (s.dir) { html += '<div class="menu-divider"></div><div class="menu-path">' + esc(s.dir) + '</div>'; }
+    html += '</div></div></div>';
+  });
   el.innerHTML = html;
 }
 
+function render(workers) {
+  lastWorkers = workers;
+  updateTabs(workers);
+  renderSessions();
+}
+
 function load() {
-  fetch('/api/workers')
-    .then(function(r){ return r.json(); })
-    .then(function(d){ render(d || []); })
-    .catch(function(){ });
+  fetch('/api/workers').then(function(r){ return r.json(); }).then(function(d){ render(d||[]); }).catch(function(){});
 }
 
 function openSession(wid, name) {
   location.href = '/session/' + encodeURIComponent(wid) + '/' + encodeURIComponent(name);
 }
 
-function killSession(wid, name) {
-  if (!confirm('Kill session "' + name + '"?')) return;
-  fetch('/api/workers/' + encodeURIComponent(wid) + '/kill/' + encodeURIComponent(name), { method:'POST' })
-    .then(function(){ load(); })
-    .catch(function(){ alert('Kill failed'); });
+function doAction(action, wid, name) {
+  closeAllMenus();
+  fetch('/api/workers/' + encodeURIComponent(wid) + '/' + action + '/' + encodeURIComponent(name), {method:'POST'})
+    .then(function(){ setTimeout(load, 600); }).catch(function(){});
 }
 
-function openModal(wid, label, capStr) {
-  _wid = wid;
-  document.getElementById('modal-title').textContent = 'New session on ' + label;
-  var sel = document.getElementById('m-cli');
-  sel.innerHTML = '<option value="terminal">terminal</option>';
-  if (capStr) {
-    var caps = capStr.split(',');
-    for (var i = 0; i < caps.length; i++) {
-      var c = caps[i].trim();
-      if (c && c !== 'terminal') {
-        sel.innerHTML += '<option value="' + esc(c) + '">' + esc(c) + '</option>';
-      }
-    }
-  }
+function toggleMenu(mid, e) {
+  e.stopPropagation();
+  var menu = document.getElementById('menu-' + mid);
+  var open = menu.classList.contains('open');
+  closeAllMenus();
+  if (!open) menu.classList.add('open');
+}
+function closeAllMenus() {
+  document.querySelectorAll('.card-menu.open').forEach(function(m){ m.classList.remove('open'); });
+}
+document.addEventListener('click', closeAllMenus);
+
+function openSpawn() {
+  var online = lastWorkers.filter(function(w){ return w.online; });
+  if (!online.length) { alert('No online workers'); return; }
+  var sel = document.getElementById('m-machine');
+  sel.innerHTML = '';
+  online.forEach(function(w) {
+    var opt = document.createElement('option');
+    opt.value = w.id; opt.textContent = w.label;
+    if (w.id === activeTab) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  updateCaps();
   document.getElementById('m-dir').value = '';
   document.getElementById('m-name').value = '';
   document.getElementById('overlay').classList.add('show');
   document.getElementById('m-dir').focus();
 }
 
-function closeModal() {
-  document.getElementById('overlay').classList.remove('show');
+function updateCaps() {
+  var wid = document.getElementById('m-machine').value;
+  var w = lastWorkers.find(function(wk){ return wk.id === wid; });
+  var caps = (w && w.capabilities) ? w.capabilities : ['terminal'];
+  var sel = document.getElementById('m-cli');
+  sel.innerHTML = '';
+  caps.forEach(function(c){ sel.innerHTML += '<option value="' + esc(c) + '">' + esc(c) + '</option>'; });
 }
 
-function overlayClick(e) {
-  if (e.target === document.getElementById('overlay')) closeModal();
-}
+function closeModal() { document.getElementById('overlay').classList.remove('show'); }
 
 function submitSpawn() {
   var btn = document.getElementById('m-submit');
-  btn.disabled = true;
-  btn.textContent = 'Spawning...';
+  btn.disabled = true; btn.textContent = 'Spawning...';
+  var wid = document.getElementById('m-machine').value;
   var payload = {
     cli: document.getElementById('m-cli').value,
     dir: document.getElementById('m-dir').value || '~',
     name: document.getElementById('m-name').value || ''
   };
-  fetch('/api/workers/' + encodeURIComponent(_wid) + '/spawn', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
+  fetch('/api/workers/' + encodeURIComponent(wid) + '/spawn', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
   })
   .then(function(r){ return r.json(); })
-  .then(function(d){
-    btn.disabled = false;
-    btn.textContent = 'Spawn';
+  .then(function(d) {
+    btn.disabled = false; btn.textContent = 'Spawn';
     if (d.error) { alert(d.error); return; }
-    var name = d.name || payload.name;
     closeModal();
-    if (name) location.href = '/session/' + encodeURIComponent(_wid) + '/' + encodeURIComponent(name);
+    var name = d.name || payload.name;
+    if (name) location.href = '/session/' + encodeURIComponent(wid) + '/' + encodeURIComponent(name);
     else load();
   })
-  .catch(function(){
-    btn.disabled = false;
-    btn.textContent = 'Spawn';
-    alert('Spawn failed');
-  });
+  .catch(function(){ btn.disabled = false; btn.textContent = 'Spawn'; alert('Spawn failed'); });
 }
 
-document.addEventListener('keydown', function(e){
-  if (e.key === 'Escape') closeModal();
-});
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
 
 load();
 setInterval(load, 30000);
-
-fetch('/health').then(function(r){ return r.json(); }).then(function(){ }).catch(function(){});
 </script>
 </body>
 </html>
