@@ -98,6 +98,10 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
   .menu-path{padding:.4rem .7rem;font-size:.7rem;color:var(--text-secondary);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+  .worker-info{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;
+    font-size:.72rem;color:var(--text-secondary)}
+  .worker-info a{color:var(--accent);text-decoration:none;font-family:var(--mono)}
+  .worker-info a:hover{text-decoration:underline}
   .empty{color:var(--text-secondary);text-align:center;padding:3rem 0;
     font-size:.85rem;border:1px dashed var(--border);border-radius:6px}
 
@@ -148,6 +152,7 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
   <button class="new-btn" onclick="openSpawn()">+ New session</button>
 </div>
 
+<div id="worker-info"></div>
 <div id="instances"></div>
 
 <div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
@@ -218,12 +223,26 @@ function renderSessions() {
   if (activeTab === 'all') {
     lastWorkers.forEach(function(w) {
       (w.sessions || []).forEach(function(s) {
-        items.push({s:s, wid:w.id, wlabel:w.label});
+        items.push({s:s, wid:w.id, wlabel:w.label, wurl:w.url});
       });
     });
   } else {
     var w = lastWorkers.find(function(wk){ return wk.id === activeTab; });
-    if (w) (w.sessions || []).forEach(function(s){ items.push({s:s, wid:w.id, wlabel:w.label}); });
+    if (w) (w.sessions || []).forEach(function(s){ items.push({s:s, wid:w.id, wlabel:w.label, wurl:w.url}); });
+  }
+
+  // Show MCP + desktop links when viewing a specific worker
+  var infoEl = document.getElementById('worker-info');
+  if (activeTab !== 'all') {
+    var wk = lastWorkers.find(function(wk){ return wk.id === activeTab; });
+    if (wk && wk.url) {
+      infoEl.innerHTML = '<div class="worker-info">' +
+        '<span>MCP: <a href="' + esc(wk.url) + '/mcp" target="_blank">' + esc(wk.url) + '/mcp</a></span>' +
+        '<span>Desktop: <a href="' + esc(wk.url) + '/desktop" target="_blank">' + esc(wk.url) + '/desktop</a></span>' +
+        '</div>';
+    }
+  } else {
+    infoEl.innerHTML = '';
   }
 
   if (!items.length) {
@@ -468,11 +487,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
           {{end}}
           <div class="dsep"></div>
           <button class="ditem" onclick="sendCtrlC();closeMenu()">Interrupt (^C)</button>
+          <button class="ditem" onclick="document.getElementById('file-input').click();closeMenu()">Attach file</button>
+          <div class="dsep"></div>
+          <a class="ditem" href="{{.WorkerURL}}/desktop" target="_blank" onclick="closeMenu()" style="text-decoration:none;display:block">Desktop (VNC)</a>
         </div>
       </div>
     </div>
   </div>
 
+  <input type="file" id="file-input" accept="image/*,application/pdf" multiple style="display:none" onchange="handleFileInput(this)">
   <div id="term"></div>
 
   <div class="abar" id="abar">
@@ -496,6 +519,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 var WS_URL      = {{.WSURL}};
 var WS_TOKEN    = {{.WorkerToken}};
 var WORKER_ID   = {{.WorkerID | js}};
+var WORKER_URL  = {{.WorkerURL | js}};
 var SESS_NAME   = {{.SessionName | js}};
 var INIT_STATUS = {{.SessionStatus | js}};
 
@@ -629,6 +653,50 @@ document.addEventListener('click', function(e) {
   var dd = document.getElementById('dropdown');
   if (!btn.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('open');
 });
+
+// File upload — sends directly to worker with worker token auth
+async function uploadFile(file) {
+  if (!file) return null;
+  var form = new FormData();
+  form.append('file', file);
+  try {
+    var res = await fetch(WORKER_URL + '/upload/' + encodeURIComponent(SESS_NAME), {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + WS_TOKEN},
+      body: form
+    });
+    var d = await res.json();
+    return d.status === 'ok' ? d.path : null;
+  } catch(e) { return null; }
+}
+
+async function handleFileInput(input) {
+  var files = Array.from(input.files || []);
+  input.value = '';
+  if (!files.length) return;
+  var paths = (await Promise.all(files.map(uploadFile))).filter(Boolean);
+  if (!paths.length) return;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({type:'input', data: paths.join(' ')}));
+  }
+  term.focus();
+}
+
+// Paste image from clipboard
+document.addEventListener('paste', function(e) {
+  var items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].type.startsWith('image/')) {
+      e.preventDefault();
+      uploadFile(items[i].getAsFile()).then(function(path) {
+        if (path && ws && ws.readyState === WebSocket.OPEN)
+          ws.send(JSON.stringify({type:'input', data: path}));
+      });
+      return;
+    }
+  }
+});
 </script>
 </body>
 </html>
@@ -638,6 +706,7 @@ document.addEventListener('click', function(e) {
 type sessionData struct {
 	WorkerID      string
 	WorkerLabel   string
+	WorkerURL     string
 	SessionName   string
 	SessionStatus string
 	WSURL         template.JS
@@ -645,12 +714,13 @@ type sessionData struct {
 }
 
 // newSessionData builds sessionData with properly typed JS values.
-func newSessionData(workerID, workerLabel, sessionName, sessionStatus, wsURL, workerToken string) sessionData {
+func newSessionData(workerID, workerLabel, workerURL, sessionName, sessionStatus, wsURL, workerToken string) sessionData {
 	b, _ := json.Marshal(wsURL)
 	tb, _ := json.Marshal(workerToken)
 	return sessionData{
 		WorkerID:      workerID,
 		WorkerLabel:   workerLabel,
+		WorkerURL:     workerURL,
 		SessionName:   sessionName,
 		SessionStatus: sessionStatus,
 		WSURL:         template.JS(b),

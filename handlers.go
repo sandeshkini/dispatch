@@ -144,6 +144,6 @@ func (s *server) handleSessionPage(w http.ResponseWriter, r *http.Request) {
 
 	info := wsInfoForSession(worker.URL, sessionName)
 	token := s.registry.Token(workerID)
-	data := newSessionData(workerID, worker.Label, sessionName, status, info["ws_url"], token)
+	data := newSessionData(workerID, worker.Label, worker.URL, sessionName, status, info["ws_url"], token)
 	sessionTmpl.Execute(w, data)
 }
