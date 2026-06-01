@@ -565,8 +565,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/lib/addon-fit.js"></script>
 <script>
-var WS_URL      = {{.WSURL | js}};
-var WS_TOKEN    = {{.WorkerToken | js}};
+var WS_URL      = {{.WSURL}};
+var WS_TOKEN    = {{.WorkerToken}};
 var WORKER_ID   = {{.WorkerID | js}};
 var SESS_NAME   = {{.SessionName | js}};
 var INIT_STATUS = {{.SessionStatus | js}};
