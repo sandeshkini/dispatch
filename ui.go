@@ -188,7 +188,7 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
 
 <script>
 var lastWorkers = [];
-var activeTab = 'all';
+var activeTab = sessionStorage.getItem('activeTab') || 'all';
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -196,6 +196,7 @@ function esc(s) {
 
 function setTab(id) {
   activeTab = id;
+  sessionStorage.setItem('activeTab', id);
   document.querySelectorAll('.machine-tab').forEach(function(t){ t.classList.remove('active'); });
   var tab = document.getElementById('tab-' + id);
   if (tab) tab.classList.add('active');
