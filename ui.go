@@ -371,10 +371,10 @@ var sessionTmpl = template.Must(template.New("session").Parse(`<!DOCTYPE html>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#07080d;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);
-  --accent:#a78bfa;--green:#34d399;--green-dim:rgba(52,211,153,0.12);
-  --red:#f87171;--red-dim:rgba(248,113,113,0.1);--amber:#fbbf24;
-  --text:#e2e8f0;--text-dim:#94a3b8;--text-muted:#475569;
+  --bg:#0d1117;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.1);
+  --accent:#58a6ff;--green:#3fb950;--green-dim:rgba(63,185,80,0.15);
+  --red:#f85149;--red-dim:rgba(248,81,73,0.15);--amber:#d29922;
+  --text:#e2e8f0;--text-dim:#94a3b8;--text-muted:#8b949e;
   --mono:'JetBrains Mono','SF Mono',monospace;
   --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
   --sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);
@@ -386,17 +386,17 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 /* topbar */
 .topbar{flex-shrink:0;display:flex;align-items:center;gap:.4rem;
   padding:calc(var(--sat) + 8px) calc(var(--sar) + 12px) 8px calc(var(--sal) + 6px);
-  background:rgba(7,8,13,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  background:rgba(13,17,23,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-bottom:1px solid var(--border);z-index:10}
 .back{color:var(--accent);background:transparent;border:none;
   font-size:1.4rem;cursor:pointer;padding:2px 6px 2px 2px;
   display:flex;align-items:center;line-height:1;text-decoration:none;
   transition:opacity .15s;flex-shrink:0}
 .back:hover{opacity:.7}
-.session-info{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px}
+.session-info{flex:1;min-width:0;display:flex;align-items:center;gap:.5rem;overflow:hidden}
 .session-label{font-size:.85rem;font-weight:700;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
-.session-sub{font-size:.68rem;color:var(--text-muted)}
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-sub{font-size:.75rem;color:var(--text-muted);white-space:nowrap;flex-shrink:0}
 .badge{font-size:.66rem;font-weight:600;letter-spacing:.04em;
   padding:2px 8px;border-radius:999px;flex-shrink:0}
 .badge-live{background:var(--green-dim);color:var(--green);border:1px solid rgba(52,211,153,.25)}
@@ -429,8 +429,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 /* action bar */
 .abar{flex-shrink:0;display:none;
   padding:6px calc(var(--sar) + 8px) calc(var(--sab) + 6px) calc(var(--sal) + 8px);
-  background:rgba(7,8,13,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-top:1px solid var(--border);
+  background:#0a0e14;border-top:1px solid var(--border);
   flex-wrap:nowrap;gap:4px;overflow-x:auto;align-items:center}
 .abar::-webkit-scrollbar{display:none}
 .abar.visible{display:flex}
@@ -440,7 +439,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   cursor:pointer;display:flex;align-items:center;justify-content:center;
   transition:background .1s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;flex-shrink:0}
 .ak:active{background:rgba(255,255,255,.1)}
-.ak.enter{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--accent)}
+.ak.enter{background:rgba(88,166,255,.1);border-color:rgba(88,166,255,.3);color:var(--accent)}
 .ak.ctrlc{background:var(--red-dim);border-color:rgba(248,113,113,.25);color:var(--red)}
 .ak-sep{width:1px;height:16px;background:var(--border);flex-shrink:0;margin:0 2px}
 </style>
@@ -451,8 +450,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   <div class="topbar">
     <a class="back" href="/" title="Back">&#8592;</a>
     <div class="session-info">
-      <div class="session-label">{{.SessionName}}</div>
-      <div class="session-sub">{{.WorkerLabel}}</div>
+      <span class="session-label">{{.SessionName}}</span>
+      <span class="session-sub">{{.WorkerLabel}}</span>
     </div>
     <span class="badge badge-connecting" id="badge">connecting</span>
     <div class="menu-wrap">
