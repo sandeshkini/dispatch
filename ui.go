@@ -300,7 +300,17 @@ function doAction(action, wid, name) {
   fetch('/api/workers/' + encodeURIComponent(wid) + '/' + action + '/' + encodeURIComponent(name), {method:'POST'})
     .then(function(r) {
       return r.json().then(function(d) {
-        if (!r.ok) { alert(d.error || 'Action failed'); return; }
+        if (!r.ok) {
+          // Kill on an already-stopped session: treat as success and update UI.
+          if (action === 'kill' && d.message && d.message.indexOf('not running') !== -1) {
+            lastWorkers.forEach(function(w) {
+              if (w.id !== wid) return;
+              (w.sessions || []).forEach(function(s) { if (s.name === name) s.status = 'stopped'; });
+            });
+            renderSessions(); setTimeout(load, 3000); return;
+          }
+          alert(d.error || d.message || 'Action failed'); return;
+        }
         // Optimistic update: reflect the change immediately without waiting for
         // the next 30s heartbeat. Background reload syncs real state after 3s.
         lastWorkers.forEach(function(w) {
@@ -653,9 +663,13 @@ function connect() {
     var atBot = buf.viewportY + term.rows >= buf.length - 3;
     term.write(data, function(){ if(atBot) term.scrollToBottom(); });
   };
-  ws.onclose = function() {
-    setBadge(INIT_STATUS === 'running' ? 'connecting' : 'stopped');
+  ws.onclose = function(e) {
     ws = null;
+    // Code 4000 = worker confirmed session is stopped. Show stopped and do not reconnect.
+    if (e.code === 4000) { setBadge('stopped'); return; }
+    // Stopped sessions: show output once then stop reconnecting.
+    if (INIT_STATUS !== 'running') { setBadge('stopped'); return; }
+    setBadge('connecting');
     setTimeout(connect, 2000);
   };
   ws.onerror = function() { setBadge('connecting'); };
