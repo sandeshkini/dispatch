@@ -45,6 +45,7 @@ func (r *Registry) Register(reg Registration) string {
 
 	w.Label = reg.Label
 	w.URL = reg.URL
+	w.APIURL = reg.APIURL
 	w.Token = reg.WorkerToken
 	w.Version = reg.Version
 	w.Capabilities = caps
@@ -90,7 +91,8 @@ func (r *Registry) WorkerURL(id string) (string, bool) {
 	return w.URL, true
 }
 
-// WorkerInfo returns the URL and auth token for an online worker.
+// WorkerInfo returns the API URL and auth token for an online worker.
+// APIURL is used for hub→worker proxy calls; it falls back to URL when not set.
 func (r *Registry) WorkerInfo(id string) (url, token string, ok bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -98,7 +100,14 @@ func (r *Registry) WorkerInfo(id string) (url, token string, ok bool) {
 	if !exists || !w.Online {
 		return "", "", false
 	}
-	return w.URL, w.Token, true
+	apiURL := w.APIURL
+	if apiURL == "" {
+		apiURL = w.URL
+	}
+	if apiURL == "" {
+		return "", "", false
+	}
+	return apiURL, w.Token, true
 }
 
 // Token returns the stored auth token for a worker regardless of online status.

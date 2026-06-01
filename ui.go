@@ -273,6 +273,7 @@ function renderSessions() {
       html += '<button class="menu-item restart" onclick="doAction(\'restart\',\'' + esc(wid) + '\',\'' + esc(s.name) + '\')">Restart</button>';
     } else {
       html += '<button class="menu-item resume" onclick="doAction(\'resume\',\'' + esc(wid) + '\',\'' + esc(s.name) + '\')">Resume</button>';
+      html += '<button class="menu-item kill" onclick="doAction(\'delete\',\'' + esc(wid) + '\',\'' + esc(s.name) + '\')">Delete</button>';
     }
     if (s.dir) { html += '<div class="menu-divider"></div><div class="menu-path">' + esc(s.dir) + '</div>'; }
     html += '</div></div></div>';
@@ -484,6 +485,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
           <button class="ditem" onclick="sessionAction('restart');closeMenu()">Restart</button>
           {{else}}
           <button class="ditem" onclick="sessionAction('resume');closeMenu()">Resume</button>
+          <button class="ditem red" onclick="sessionAction('delete');closeMenu()">Delete</button>
           {{end}}
           <div class="dsep"></div>
           <button class="ditem" onclick="sendCtrlC();closeMenu()">Interrupt (^C)</button>
@@ -609,6 +611,9 @@ if (navigator.maxTouchPoints > 0) {
     e.preventDefault();
     if(moved)raf=requestAnimationFrame(runM); else term.focus();
   },{passive:false});
+  // On desktop browsers that report maxTouchPoints>0, the overlay intercepts
+  // mouse clicks and prevents xterm from receiving focus. Forward clicks to focus.
+  ov.addEventListener('click',function(){ term.focus(); });
 }
 
 function connect() {

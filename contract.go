@@ -10,6 +10,7 @@ import "time"
 type Registration struct {
 	Label        string    `json:"label"`
 	URL          string    `json:"url"`
+	APIURL       string    `json:"api_url,omitempty"` // internal URL dispatch uses for proxy calls; falls back to URL if unset
 	WorkerToken  string    `json:"worker_token"`
 	Version      string    `json:"version,omitempty"`
 	Capabilities []string  `json:"capabilities,omitempty"` // e.g. ["claude","pi","terminal"]
@@ -25,6 +26,7 @@ type Registration struct {
 //   POST {url}/api/v1/kill/{name}
 //   POST {url}/api/v1/restart/{name}
 //   POST {url}/api/v1/resume/{name}
+//   POST {url}/api/v1/delete/{name}   (session must be stopped first)
 //   GET  {url}/api/v1/output/{name}?lines=100
 //   WS   {url}/ws/{name}             (browser connects directly)
 // ---------------------------------------------------------------------------
@@ -52,8 +54,9 @@ type Session struct {
 type Worker struct {
 	ID           string
 	Label        string
-	URL          string
-	Token        string // worker's own auth token — used by hub when calling back
+	URL          string   // public URL — used for browser WebSocket connections
+	APIURL       string   // internal URL — used by hub for proxy calls; falls back to URL if empty
+	Token        string   // worker's own auth token — used by hub when calling back
 	Version      string
 	Capabilities []string
 	Sessions     []Session
