@@ -191,7 +191,7 @@ var lastWorkers = [];
 var activeTab = sessionStorage.getItem('activeTab') || 'all';
 
 function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function setTab(id) {
@@ -573,6 +573,8 @@ var WORKER_ID   = {{.WorkerID | js}};
 var WORKER_URL  = {{.WorkerURL | js}};
 var SESS_NAME   = {{.SessionName | js}};
 var INIT_STATUS = {{.SessionStatus | js}};
+var statusFetchSeq = 0;  // incremented each call so stale responses are ignored
+var reconnectTimer = null;
 
 var term = new Terminal({
   cursorBlink:true, cursorStyle:'bar',
@@ -686,12 +688,13 @@ function connect() {
   };
   ws.onclose = function(e) {
     ws = null;
+    reconnectTimer = null;
     // Code 4000 = worker confirmed session is stopped. Show stopped and do not reconnect.
     if (e.code === 4000) { setBadge('stopped'); return; }
     // Stopped sessions: show output once then stop reconnecting.
     if (INIT_STATUS !== 'running') { setBadge('stopped'); return; }
     setBadge('connecting');
-    setTimeout(connect, 2000);
+    reconnectTimer = setTimeout(connect, 2000);
   };
   ws.onerror = function() { setBadge('connecting'); };
 }
@@ -713,14 +716,17 @@ function updateSessionButtons(status) {
 // updates the dropdown buttons. Called on page load so the buttons always
 // reflect actual state, not the stale status baked into the template.
 function fetchSessionStatus() {
+  // Sequence number ensures only the latest call applies — concurrent calls
+  // (page load + ws.onopen) won't overwrite each other with stale data.
+  var seq = ++statusFetchSeq;
   fetch('/api/workers/' + encodeURIComponent(WORKER_ID) + '/instances')
     .then(function(r) { return r.json(); })
     .then(function(sessions) {
+      if (seq !== statusFetchSeq) return; // superseded by a later call
       var sess = sessions.find(function(s) { return s.name === SESS_NAME; });
       if (!sess) return;
       INIT_STATUS = sess.status;
       updateSessionButtons(sess.status);
-      // Correct the badge if the worker says stopped but WS shows live.
       if (sess.status !== 'running') setBadge('stopped');
     })
     .catch(function(){});
@@ -735,14 +741,17 @@ function sessionAction(action) {
         if (action === 'kill') {
           INIT_STATUS = 'stopped';
           updateSessionButtons('stopped');
+          // Close WS immediately — don't wait for code 4000 from the worker.
+          if (ws) { ws.onclose = null; ws.close(); ws = null; }
           setBadge('stopped');
         } else {
-          // resume or restart: reconnect WS so the terminal becomes live again.
+          // resume or restart: cancel any pending reconnect timer, then reconnect.
           INIT_STATUS = 'running';
           updateSessionButtons('running');
           setBadge('connecting');
+          if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
           if (ws) { ws.onclose = null; ws.close(); ws = null; }
-          setTimeout(connect, 500);
+          reconnectTimer = setTimeout(connect, 500);
         }
       });
     })
