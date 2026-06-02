@@ -80,15 +80,18 @@ func main() {
 	mux.HandleFunc("/api/workers/", func(w http.ResponseWriter, r *http.Request) {
 		rest := strings.TrimPrefix(r.URL.Path, "/api/workers/")
 
-		// /api/workers/{id}/ws/{name} → ws info
-		if strings.Contains(rest, "/ws/") {
-			srv.handleWSInfo(w, r)
-			return
-		}
-
 		// /api/workers/{id} (no further path) → detail
 		if !strings.Contains(rest, "/") {
 			srv.handleWorkerDetail(w, r)
+			return
+		}
+
+		// Split into id + action segment to route correctly.
+		// Must check action=="ws" exactly — strings.Contains("/ws/") would
+		// misroute paths like /kill/foo/ws/bar to handleWSInfo.
+		parts := strings.SplitN(rest, "/", 3)
+		if len(parts) >= 2 && parts[1] == "ws" {
+			srv.handleWSInfo(w, r)
 			return
 		}
 
