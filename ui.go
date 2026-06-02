@@ -761,17 +761,16 @@ document.addEventListener('click', function(e) {
   if (!btn.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('open');
 });
 
-// File upload — sends directly to worker with worker token auth
+// File upload — routed through dispatch proxy so it works behind Pangolin SSO.
 async function uploadFile(file) {
   if (!file) return null;
   var form = new FormData();
   form.append('file', file);
   try {
-    var res = await fetch(WORKER_URL + '/upload/' + encodeURIComponent(SESS_NAME), {
-      method: 'POST',
-      headers: {'Authorization': 'Bearer ' + WS_TOKEN},
-      body: form
-    });
+    var res = await fetch(
+      '/api/workers/' + encodeURIComponent(WORKER_ID) + '/upload/' + encodeURIComponent(SESS_NAME),
+      {method: 'POST', body: form}
+    );
     var d = await res.json();
     return d.status === 'ok' ? d.path : null;
   } catch(e) { return null; }

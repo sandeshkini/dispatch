@@ -27,6 +27,8 @@ type Registration struct {
 //   POST {url}/api/v1/restart/{name}
 //   POST {url}/api/v1/resume/{name}
 //   POST {url}/api/v1/delete/{name}   (session must be stopped first)
+//   POST {url}/api/v1/upload/{name}   multipart/form-data; field: file (images + PDFs, max 32MB)
+//   GET  {url}/api/v1/browse?dir=     list allowed subdirectories
 //   GET  {url}/api/v1/output/{name}?lines=100
 //   WS   {url}/ws/{name}             (browser connects directly)
 // ---------------------------------------------------------------------------
