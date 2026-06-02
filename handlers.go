@@ -86,13 +86,13 @@ func (s *server) handleWSInfo(w http.ResponseWriter, r *http.Request) {
 	id := strings.SplitN(parts[0], "/", 2)[0]
 	name := parts[1]
 
-	workerURL, ok := s.registry.WorkerURL(id)
+	wsURL, ok := s.registry.WorkerWSURL(id)
 	if !ok {
 		jsonError(w, "worker not found", 404)
 		return
 	}
 
-	jsonOK(w, wsInfoForSession(workerURL, name))
+	jsonOK(w, wsInfoForSession(wsURL, name))
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +142,11 @@ func (s *server) handleSessionPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	info := wsInfoForSession(worker.URL, sessionName)
+	wsURL, _ := s.registry.WorkerWSURL(workerID)
+	if wsURL == "" {
+		wsURL = worker.URL
+	}
+	info := wsInfoForSession(wsURL, sessionName)
 	token := s.registry.Token(workerID)
 	data := newSessionData(workerID, worker.Label, worker.URL, sessionName, status, info["ws_url"], token)
 	sessionTmpl.Execute(w, data)

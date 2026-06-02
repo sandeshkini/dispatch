@@ -80,13 +80,30 @@ func (r *Registry) Get(id string) (workerView, bool) {
 	return w.view(), true
 }
 
-// WorkerURL returns the base URL for an online worker.
+// WorkerURL returns the public base URL for an online worker.
 func (r *Registry) WorkerURL(id string) (string, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	w, ok := r.workers[id]
 	if !ok || !w.Online {
 		return "", false
+	}
+	return w.URL, true
+}
+
+// WorkerWSURL returns the URL to use for browser WebSocket connections.
+// Uses APIURL when set (SSO-free register hostname) so the browser can
+// connect without needing a Pangolin SSO cookie for the worker's public URL.
+// Falls back to the public URL when no APIURL is configured.
+func (r *Registry) WorkerWSURL(id string) (string, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	w, ok := r.workers[id]
+	if !ok || !w.Online {
+		return "", false
+	}
+	if w.APIURL != "" {
+		return w.APIURL, true
 	}
 	return w.URL, true
 }
