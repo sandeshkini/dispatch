@@ -671,13 +671,12 @@ function connect() {
   ws.binaryType = 'arraybuffer';
   ws.onopen = function() {
     if (WS_TOKEN) ws.send(JSON.stringify({type: 'auth', token: WS_TOKEN}));
-    // WS connected = session is running. Update buttons immediately so they
-    // always match the badge, regardless of stale status in the template.
-    INIT_STATUS = 'running';
-    updateSessionButtons('running');
     setBadge('live');
     sendResize();
     term.focus();
+    // Fetch real session status now that the WS is up — avoids racing with the
+    // initial fetchSessionStatus() call and ensures buttons always reflect truth.
+    fetchSessionStatus();
   };
   ws.onmessage = function(e) {
     var data = new Uint8Array(e.data);
