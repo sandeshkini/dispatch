@@ -232,19 +232,7 @@ function renderSessions() {
     if (w) (w.sessions || []).forEach(function(s){ items.push({s:s, wid:w.id, wlabel:w.label, wurl:w.url}); });
   }
 
-  // Show MCP + desktop links when viewing a specific worker
-  var infoEl = document.getElementById('worker-info');
-  if (activeTab !== 'all') {
-    var wk = lastWorkers.find(function(wk){ return wk.id === activeTab; });
-    if (wk && wk.url) {
-      infoEl.innerHTML = '<div class="worker-info">' +
-        '<span>MCP: <a href="' + esc(wk.url) + '/mcp" target="_blank">' + esc(wk.url) + '/mcp</a></span>' +
-        '<span>Desktop: <a href="' + esc(wk.url) + '/desktop" target="_blank">' + esc(wk.url) + '/desktop</a></span>' +
-        '</div>';
-    }
-  } else {
-    infoEl.innerHTML = '';
-  }
+  document.getElementById('worker-info').innerHTML = '';
 
   if (!items.length) {
     el.innerHTML = '<div class="empty">No sessions</div>';
