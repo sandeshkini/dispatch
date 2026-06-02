@@ -192,7 +192,7 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
       </div>
       <div class="fg">
         <label>Directory</label>
-        <input id="m-dir" type="text" placeholder="~" oninput="browseDir(null, this.value, true)" autocomplete="off" spellcheck="false">
+        <input id="m-dir" type="text" placeholder="~" oninput="browseDirFromInput(this.value)" autocomplete="off" spellcheck="false">
         <div class="dir-browser" id="m-dirbrowser">
           <div class="dir-nav">
             <button class="dir-nav-up" id="m-dirup" onclick="browseDirUp()" title="Up">↑</button>
@@ -420,36 +420,37 @@ function updateCaps() {
   var sel = document.getElementById('m-cli');
   sel.innerHTML = '';
   caps.forEach(function(c){ sel.innerHTML += '<option value="' + esc(c) + '">' + esc(c) + '</option>'; });
-  browseHistory = [];
-  browseDir(wid, '~', false);
 }
 
 function closeModal() { document.getElementById('overlay').classList.remove('show'); }
 
 var browseWid = null;
 var browseHistory = [];
+var browseFetchSeq = 0;
+var browseInputTimer = null;
 
 function browseDir(wid, path, fromInput) {
   if (wid) browseWid = wid;
   if (!browseWid) return;
   var dir = (path || '').trim() || '~';
-  if (!fromInput) {
-    document.getElementById('m-dir').value = dir;
-  }
+  if (!fromInput) document.getElementById('m-dir').value = dir;
   document.getElementById('m-dirpath').textContent = dir;
   document.getElementById('m-dirlist').innerHTML = '<div class="dir-empty">Loading…</div>';
-  document.getElementById('m-dirup').disabled = (dir === '~' || dir === '/');
+  document.getElementById('m-dirup').disabled = false;
+  var seq = ++browseFetchSeq;
   var url = '/api/workers/' + encodeURIComponent(browseWid) + '/browse?dir=' + encodeURIComponent(dir);
   fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+    if (seq !== browseFetchSeq) return; // superseded by a later fetch
     if (d.error) { document.getElementById('m-dirlist').innerHTML = '<div class="dir-empty">' + esc(d.error) + '</div>'; return; }
     var current = d.current || dir;
-    document.getElementById('m-dir').value = current;
+    if (!fromInput) document.getElementById('m-dir').value = current;
     document.getElementById('m-dirpath').textContent = current;
-    document.getElementById('m-dirup').disabled = (current === '/' || current === '~');
-    if (!fromInput) {
-      if (!browseHistory.length || browseHistory[browseHistory.length-1] !== current) {
-        browseHistory.push(current);
-      }
+    document.getElementById('m-dirup').disabled = (current === '/');
+    if (fromInput) {
+      // Typing navigated to a new location — reset history so Up works correctly.
+      browseHistory = [current];
+    } else if (!browseHistory.length || browseHistory[browseHistory.length-1] !== current) {
+      browseHistory.push(current);
     }
     var dirs = d.dirs || [];
     if (!dirs.length) {
@@ -469,8 +470,14 @@ function browseDir(wid, path, fromInput) {
     });
     document.getElementById('m-dirlist').innerHTML = html;
   }).catch(function() {
+    if (seq !== browseFetchSeq) return;
     document.getElementById('m-dirlist').innerHTML = '<div class="dir-empty">Failed to load</div>';
   });
+}
+
+function browseDirFromInput(val) {
+  clearTimeout(browseInputTimer);
+  browseInputTimer = setTimeout(function() { browseDir(null, val, true); }, 400);
 }
 
 function browseDirUp() {
