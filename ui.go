@@ -459,7 +459,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .topbar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
   padding:calc(var(--sat) + 8px) calc(var(--sar) + 12px) 8px calc(var(--sal) + 6px);
   background:rgba(13,17,23,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);z-index:10}
+  border-bottom:1px solid var(--border);z-index:20}
 .topbar-left{display:flex;align-items:center;gap:.5rem;flex:1;min-width:0;overflow:hidden}
 .topbar-right{display:flex;align-items:center;gap:.4rem;flex-shrink:0}
 .back{color:var(--accent);background:transparent;border:none;
@@ -636,7 +636,7 @@ if (navigator.maxTouchPoints > 0) {
   document.getElementById('abar').classList.add('visible');
   var tc = document.getElementById('term');
   var ov = document.createElement('div');
-  ov.style.cssText = 'position:absolute;inset:0;z-index:10;touch-action:none;-webkit-tap-highlight-color:transparent;';
+  ov.style.cssText = 'position:absolute;inset:0;z-index:1;touch-action:none;-webkit-tap-highlight-color:transparent;';
   tc.style.position = 'relative';
   tc.appendChild(ov);
   var ty0=0,tyL=0,tL=0,vel=0,acc=0,moved=false,raf=null;
