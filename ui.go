@@ -137,6 +137,26 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
   .btn-ok{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.3)}
   .btn-ok:hover:not(:disabled){background:rgba(88,166,255,.25)}
   .btn-ok:disabled{opacity:.4;cursor:not-allowed}
+
+  .dir-browser{border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-top:.25rem}
+  .dir-nav{display:flex;align-items:center;gap:.4rem;padding:.35rem .6rem;
+    background:rgba(255,255,255,.04);border-bottom:1px solid var(--border);font-size:.72rem;
+    color:var(--text-secondary);min-height:28px}
+  .dir-nav-up{background:none;border:none;color:var(--accent);font-family:var(--mono);
+    font-size:.72rem;cursor:pointer;padding:0 .3rem;flex-shrink:0}
+  .dir-nav-up:disabled{opacity:.3;cursor:default}
+  .dir-nav-path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;direction:rtl;text-align:left}
+  .dir-list{max-height:160px;overflow-y:auto}
+  .dir-item{display:flex;align-items:center;gap:.5rem;padding:.38rem .7rem;cursor:pointer;
+    font-size:.8rem;transition:background .1s;border:none;background:none;
+    width:100%;text-align:left;color:var(--text);font-family:var(--mono)}
+  .dir-item:hover{background:rgba(255,255,255,.06)}
+  .dir-item.selected{background:var(--accent-dim);color:var(--accent)}
+  .dir-item .di-icon{font-size:.75rem;flex-shrink:0;color:var(--text-secondary)}
+  .dir-item.git .di-icon{color:var(--green)}
+  .dir-item .di-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dir-item .di-arrow{font-size:.65rem;color:var(--text-secondary);flex-shrink:0}
+  .dir-empty{padding:.6rem .7rem;font-size:.75rem;color:var(--text-secondary)}
 </style>
 </head>
 <body>
@@ -172,7 +192,14 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
       </div>
       <div class="fg">
         <label>Directory</label>
-        <input id="m-dir" type="text" placeholder="~">
+        <input id="m-dir" type="text" placeholder="~" oninput="browseDir(null, this.value, true)" autocomplete="off" spellcheck="false">
+        <div class="dir-browser" id="m-dirbrowser">
+          <div class="dir-nav">
+            <button class="dir-nav-up" id="m-dirup" onclick="browseDirUp()" title="Up">↑</button>
+            <span class="dir-nav-path" id="m-dirpath">~</span>
+          </div>
+          <div class="dir-list" id="m-dirlist"><div class="dir-empty">Loading…</div></div>
+        </div>
       </div>
       <div class="fg">
         <label>Session name (optional)</label>
@@ -379,8 +406,11 @@ function openSpawn() {
   updateCaps();
   document.getElementById('m-dir').value = '';
   document.getElementById('m-name').value = '';
+  browseHistory = [];
+  var wid = document.getElementById('m-machine').value;
+  browseDir(wid, '~', false);
   document.getElementById('overlay').classList.add('show');
-  document.getElementById('m-dir').focus();
+  document.getElementById('m-name').focus();
 }
 
 function updateCaps() {
@@ -390,9 +420,71 @@ function updateCaps() {
   var sel = document.getElementById('m-cli');
   sel.innerHTML = '';
   caps.forEach(function(c){ sel.innerHTML += '<option value="' + esc(c) + '">' + esc(c) + '</option>'; });
+  browseHistory = [];
+  browseDir(wid, '~', false);
 }
 
 function closeModal() { document.getElementById('overlay').classList.remove('show'); }
+
+var browseWid = null;
+var browseHistory = [];
+
+function browseDir(wid, path, fromInput) {
+  if (wid) browseWid = wid;
+  if (!browseWid) return;
+  var dir = (path || '').trim() || '~';
+  if (!fromInput) {
+    document.getElementById('m-dir').value = dir;
+  }
+  document.getElementById('m-dirpath').textContent = dir;
+  document.getElementById('m-dirlist').innerHTML = '<div class="dir-empty">Loading…</div>';
+  document.getElementById('m-dirup').disabled = (dir === '~' || dir === '/');
+  var url = '/api/workers/' + encodeURIComponent(browseWid) + '/browse?dir=' + encodeURIComponent(dir);
+  fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.error) { document.getElementById('m-dirlist').innerHTML = '<div class="dir-empty">' + esc(d.error) + '</div>'; return; }
+    var current = d.current || dir;
+    document.getElementById('m-dir').value = current;
+    document.getElementById('m-dirpath').textContent = current;
+    document.getElementById('m-dirup').disabled = (current === '/' || current === '~');
+    if (!fromInput) {
+      if (!browseHistory.length || browseHistory[browseHistory.length-1] !== current) {
+        browseHistory.push(current);
+      }
+    }
+    var dirs = d.dirs || [];
+    if (!dirs.length) {
+      document.getElementById('m-dirlist').innerHTML = '<div class="dir-empty">No subdirectories</div>';
+      return;
+    }
+    var html = '';
+    dirs.forEach(function(item) {
+      var cls = 'dir-item' + (item.has_git ? ' git' : '');
+      var icon = item.has_git ? '⎇' : '⬡';
+      var arrow = item.has_subs ? '›' : '';
+      html += '<button class="' + cls + '" onclick="browseDir(null,' + JSON.stringify(item.path) + ',false)">';
+      html += '<span class="di-icon">' + icon + '</span>';
+      html += '<span class="di-name">' + esc(item.name) + '</span>';
+      html += '<span class="di-arrow">' + arrow + '</span>';
+      html += '</button>';
+    });
+    document.getElementById('m-dirlist').innerHTML = html;
+  }).catch(function() {
+    document.getElementById('m-dirlist').innerHTML = '<div class="dir-empty">Failed to load</div>';
+  });
+}
+
+function browseDirUp() {
+  if (browseHistory.length > 1) {
+    browseHistory.pop();
+    var prev = browseHistory[browseHistory.length - 1];
+    browseHistory.pop();
+    browseDir(null, prev, false);
+  } else {
+    var cur = document.getElementById('m-dir').value.trim();
+    var parent = cur.replace(/\/[^/]+$/, '') || '/';
+    browseDir(null, parent, false);
+  }
+}
 
 function submitSpawn() {
   var btn = document.getElementById('m-submit');
