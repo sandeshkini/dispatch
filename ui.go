@@ -671,6 +671,10 @@ function connect() {
   ws.binaryType = 'arraybuffer';
   ws.onopen = function() {
     if (WS_TOKEN) ws.send(JSON.stringify({type: 'auth', token: WS_TOKEN}));
+    // WS connected = session is running. Update buttons immediately so they
+    // always match the badge, regardless of stale status in the template.
+    INIT_STATUS = 'running';
+    updateSessionButtons('running');
     setBadge('live');
     sendResize();
     term.focus();
@@ -727,10 +731,18 @@ function sessionAction(action) {
       return r.json().then(function(d) {
         if (!r.ok) { alert(d.error || d.message || action + ' failed'); return; }
         if (action === 'delete') { location.href = '/'; return; }
-        var newStatus = (action === 'kill') ? 'stopped' : 'running';
-        INIT_STATUS = newStatus;
-        updateSessionButtons(newStatus);
-        if (action === 'kill') setBadge('stopped');
+        if (action === 'kill') {
+          INIT_STATUS = 'stopped';
+          updateSessionButtons('stopped');
+          setBadge('stopped');
+        } else {
+          // resume or restart: reconnect WS so the terminal becomes live again.
+          INIT_STATUS = 'running';
+          updateSessionButtons('running');
+          setBadge('connecting');
+          if (ws) { ws.onclose = null; ws.close(); ws = null; }
+          setTimeout(connect, 500);
+        }
       });
     })
     .catch(function(){});
