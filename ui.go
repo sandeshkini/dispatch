@@ -720,6 +720,8 @@ function fetchSessionStatus() {
       if (!sess) return;
       INIT_STATUS = sess.status;
       updateSessionButtons(sess.status);
+      // Correct the badge if the worker says stopped but WS shows live.
+      if (sess.status !== 'running') setBadge('stopped');
     })
     .catch(function(){});
 }
