@@ -461,7 +461,7 @@ function browseDir(wid, path, fromInput) {
       var cls = 'dir-item' + (item.has_git ? ' git' : '');
       var icon = item.has_git ? '⎇' : '⬡';
       var arrow = item.has_subs ? '›' : '';
-      html += '<button class="' + cls + '" onclick="browseDir(null,' + JSON.stringify(item.path) + ',false)">';
+      html += '<button class="' + cls + '" data-path="' + esc(item.path) + '" onclick="browseDir(null,this.dataset.path,false)">';
       html += '<span class="di-icon">' + icon + '</span>';
       html += '<span class="di-name">' + esc(item.name) + '</span>';
       html += '<span class="di-arrow">' + arrow + '</span>';
