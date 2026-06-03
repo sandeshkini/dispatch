@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -13,12 +14,13 @@ func (s *server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	if s.config.AuthToken != "" {
 		bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if bearer != s.config.AuthToken {
+		if subtle.ConstantTimeCompare([]byte(bearer), []byte(s.config.AuthToken)) != 1 {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			http.Error(w, "unauthorized", 401)
 			return
 		}
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	var reg Registration
 	if err := json.NewDecoder(r.Body).Decode(&reg); err != nil {
 		jsonError(w, "invalid JSON: "+err.Error(), 400)
@@ -92,7 +94,13 @@ func (s *server) handleWSInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonOK(w, wsInfoForSession(wsURL, name))
+	info := wsInfoForSession(wsURL, name)
+	info["token"] = s.registry.Token(id)
+	jsonOK(w, info)
+}
+
+func (s *server) handleMulti(w http.ResponseWriter, r *http.Request) {
+	multiTmpl.Execute(w, nil)
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {

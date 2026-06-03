@@ -99,6 +99,7 @@ func main() {
 		srv.handleWorkerProxy(w, r)
 	})
 
+	mux.HandleFunc("/multi", srv.handleMulti)
 	mux.HandleFunc("/session/", srv.handleSessionPage)
 	mux.HandleFunc("/health", srv.handleHealth)
 	mux.HandleFunc("/", srv.handleDashboard)
