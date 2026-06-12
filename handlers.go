@@ -35,6 +35,10 @@ func (s *server) handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) handleWorkers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		jsonError(w, "GET only", 405)
+		return
+	}
 	jsonOK(w, s.registry.List())
 }
 

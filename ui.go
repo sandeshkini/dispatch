@@ -658,6 +658,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .toast.show{opacity:1}
 .toast.error{background:#1c0f0f;border:1px solid rgba(248,81,73,.4);color:var(--red)}
 .toast.info{background:rgba(13,17,23,.95);border:1px solid rgba(255,255,255,.2);color:var(--text)}
+@media (max-width:480px){
+  .session-sep,.session-sub{display:none}
+}
 </style>
 </head>
 <body>
@@ -683,8 +686,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
           <div class="dsep"></div>
           <button class="ditem" onclick="sendCtrlC();closeMenu()">Interrupt (^C)</button>
           <button class="ditem" onclick="document.getElementById('file-input').click();closeMenu()">Attach file</button>
-          <div class="dsep"></div>
-          <a class="ditem" href="{{.WorkerURL}}/desktop" target="_blank" onclick="closeMenu()" style="text-decoration:none;display:block">Desktop (VNC)</a>
         </div>
       </div>
     </div>
@@ -704,6 +705,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
     <button class="ak enter" onclick="sendKey('\r')">&#8629;</button>
     <div class="ak-sep"></div>
     <button class="ak ctrlc" onclick="sendCtrlC()">^C</button>
+    <div class="ak-sep"></div>
+    <button class="ak" onclick="pasteToTerm()">paste</button>
   </div>
 
 </div>
@@ -777,6 +780,16 @@ function sendKey(seq) {
 }
 
 function sendCtrlC() { sendKey('\x03'); }
+
+function pasteToTerm() {
+  if (!navigator.clipboard || !navigator.clipboard.readText) return;
+  navigator.clipboard.readText().then(function(text) {
+    if (!text) return;
+    term.scrollToBottom();
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({type:'input', data:text}));
+    term.focus();
+  }).catch(function(){});
+}
 
 term.onData(function(data) {
   term.scrollToBottom();
@@ -1051,7 +1064,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 /* pane header */
 .pane-header{flex-shrink:0;height:32px;display:flex;align-items:center;gap:.35rem;
   padding:0 .35rem 0 .65rem;background:rgba(13,17,23,.85);
-  border-bottom:1px solid var(--border);overflow:hidden}
+  border-bottom:1px solid var(--border);overflow:visible;position:relative;z-index:10}
 .pane-name{font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;flex-shrink:1;min-width:0}
 .pane-sep{font-size:.78rem;color:var(--text-muted);flex-shrink:0}
@@ -1371,6 +1384,9 @@ function setGridCSS() {
 }
 
 function createPaneEl(i, p) {
+  var running = p.initStatus === 'running';
+  var showRun  = running ? '' : 'display:none';
+  var showStop = running ? 'display:none' : '';
   var d = document.createElement('div');
   d.className = 'pane'; d.id = 'pane-' + i;
   d.innerHTML =
@@ -1378,14 +1394,14 @@ function createPaneEl(i, p) {
       '<span class="pane-name">' + esc(p.sessionName) + '</span>' +
       '<span class="pane-sep">&#183;</span>' +
       '<span class="pane-worker">' + esc(p.workerLabel) + '</span>' +
-      '<span class="pane-badge badge-' + (p.initStatus === 'running' ? 'connecting' : 'stopped') + '" id="pbadge-' + i + '">' + (p.initStatus === 'running' ? 'connecting' : 'stopped') + '</span>' +
+      '<span class="pane-badge badge-' + (running ? 'connecting' : 'stopped') + '" id="pbadge-' + i + '">' + (running ? 'connecting' : 'stopped') + '</span>' +
       '<div class="pane-menu-wrap">' +
         '<button class="pane-mbtn" onclick="togglePaneMenu(' + i + ')">&#8943;</button>' +
         '<div class="pane-dropdown" id="pdrop-' + i + '">' +
-          '<button class="ditem" id="pd-kill-'    + i + '" onclick="paneAction(' + i + ',\'kill\')">Kill</button>' +
-          '<button class="ditem amber" id="pd-restart-' + i + '" onclick="paneAction(' + i + ',\'restart\')">Restart</button>' +
-          '<button class="ditem green" id="pd-resume-'  + i + '" onclick="paneAction(' + i + ',\'resume\')">Resume</button>' +
-          '<button class="ditem red" id="pd-delete-'  + i + '" onclick="paneAction(' + i + ',\'delete\')">Delete</button>' +
+          '<button class="ditem" id="pd-kill-'    + i + '" style="' + showRun  + '" onclick="paneAction(' + i + ',\'kill\')">Kill</button>' +
+          '<button class="ditem amber" id="pd-restart-' + i + '" style="' + showRun  + '" onclick="paneAction(' + i + ',\'restart\')">Restart</button>' +
+          '<button class="ditem green" id="pd-resume-'  + i + '" style="' + showStop + '" onclick="paneAction(' + i + ',\'resume\')">Resume</button>' +
+          '<button class="ditem red"   id="pd-delete-'  + i + '" style="' + showStop + '" onclick="paneAction(' + i + ',\'delete\')">Delete</button>' +
           '<div class="dsep"></div>' +
           '<button class="ditem" onclick="closePane(' + i + ')">Close pane</button>' +
         '</div>' +
