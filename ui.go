@@ -60,6 +60,16 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
   .section-label{font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;
     letter-spacing:.1em;margin-bottom:.75rem;font-weight:500}
 
+  @media (max-width:480px){
+    /* toolbar: label on its own line, buttons fill the row */
+    .toolbar{flex-wrap:wrap;gap:.4rem;margin-bottom:1.25rem}
+    .section-label{width:100%;margin-bottom:0}
+    .split-btn{margin-left:0;flex:1;justify-content:center;padding:.6rem .5rem}
+    .new-btn{margin-left:0;flex:1;padding:.6rem .5rem}
+    /* machine tabs: a bit more padding for touch */
+    .machine-tab{padding:.3rem .8rem;font-size:.78rem}
+  }
+
   .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
     margin-bottom:.75rem;transition:border-color .15s;position:relative;overflow:visible;
     animation:cardIn .4s cubic-bezier(.16,1,.3,1) both}
@@ -660,6 +670,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .toast.info{background:rgba(13,17,23,.95);border:1px solid rgba(255,255,255,.2);color:var(--text)}
 @media (max-width:480px){
   .session-sep,.session-sub{display:none}
+  /* bigger tap targets — iOS HIG minimum is 44pt */
+  .back{padding:.6rem .7rem .6rem 0;font-size:1.6rem;min-height:44px}
+  .menu-btn{padding:10px 14px;min-height:44px;min-width:44px;font-size:1.4rem}
+  /* slightly larger session label so it's readable at arm's length */
+  .session-label{font-size:.95rem}
+  /* compact badge — it's secondary info on mobile */
+  .badge{font-size:.6rem;padding:1px 6px;letter-spacing:.02em}
+  /* dropdown should be wide enough to tap easily */
+  .ditem{padding:.65rem .85rem}
 }
 </style>
 </head>
