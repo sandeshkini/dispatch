@@ -27,7 +27,7 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:var(--mono);background:var(--bg);color:var(--text);
-    padding:1.25rem 1rem 6rem;-webkit-text-size-adjust:100%;min-height:100vh}
+    padding:1.25rem 1rem 2rem;-webkit-text-size-adjust:100%;min-height:100vh}
 
   .title{display:flex;align-items:center;justify-content:space-between;
     font-size:1rem;font-weight:700;margin-bottom:2rem;
@@ -134,7 +134,7 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
   .modal-close{background:none;border:none;color:var(--text-secondary);
     font-size:1.2rem;cursor:pointer;padding:2px 4px;transition:color .12s}
   .modal-close:hover{color:var(--text)}
-  .modal-body{padding:1.1rem;display:flex;flex-direction:column;gap:.85rem}
+  .modal-body{padding:1.1rem;display:flex;flex-direction:column;gap:.85rem;max-height:70vh;overflow-y:auto}
   .fg{display:flex;flex-direction:column;gap:.35rem}
   .fg label{font-size:.7rem;font-weight:600;color:var(--text-secondary);
     text-transform:uppercase;letter-spacing:.06em}
@@ -142,7 +142,9 @@ var dashTmpl = template.Must(template.New("dash").Parse(`<!DOCTYPE html>
     color:var(--text);font-family:var(--mono);font-size:.85rem;
     padding:.45rem .65rem;border-radius:6px;outline:none;transition:border-color .15s;width:100%}
   .fg select:focus,.fg input:focus{border-color:rgba(88,166,255,.5)}
-  .fg select{cursor:pointer;appearance:none}
+  .fg select{cursor:pointer;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right .65rem center;background-size:10px;padding-right:2rem}
   .modal-foot{padding:.75rem 1.1rem;border-top:1px solid var(--border);
     display:flex;justify-content:flex-end;gap:.5rem}
   .btn{font-size:.82rem;font-weight:700;padding:.45rem 1rem;font-family:var(--mono);
@@ -443,6 +445,7 @@ function openSpawn() {
     if (w.id === activeTab) opt.selected = true;
     sel.appendChild(opt);
   });
+  document.getElementById('m-machine-fg').style.display = online.length === 1 ? 'none' : '';
   updateCaps();
   document.getElementById('m-dir').value = '';
   document.getElementById('m-name').value = '';
@@ -648,7 +651,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .abar{flex-shrink:0;display:none;
   padding:6px calc(var(--sar) + 8px) calc(var(--sab) + 6px) calc(var(--sal) + 8px);
   background:#0a0e14;border-top:1px solid var(--border);
-  flex-wrap:nowrap;gap:4px;overflow-x:auto;align-items:center;justify-content:center}
+  flex-wrap:nowrap;gap:4px;overflow-x:auto;align-items:center;justify-content:flex-start}
 .abar::-webkit-scrollbar{display:none}
 .abar.visible{display:flex}
 .ak{height:30px;min-width:40px;padding:0 8px;border-radius:6px;
@@ -703,8 +706,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
           <button class="ditem" id="dd-resume"  onclick="sessionAction('resume');closeMenu()"  style="display:{{if eq .SessionStatus "running"}}none{{else}}block{{end}}">Resume</button>
           <button class="ditem red" id="dd-delete" onclick="sessionAction('delete');closeMenu()" style="display:{{if eq .SessionStatus "running"}}none{{else}}block{{end}}">Delete</button>
           <div class="dsep"></div>
-          <button class="ditem" onclick="sendCtrlC();closeMenu()">Interrupt (^C)</button>
-          <button class="ditem" onclick="document.getElementById('file-input').click();closeMenu()">Attach file</button>
+          <button class="ditem" id="dd-ctrlc" onclick="sendCtrlC();closeMenu()">Interrupt (^C)</button>
+          <button class="ditem" id="dd-attach" onclick="document.getElementById('file-input').click();closeMenu()">Attach file</button>
         </div>
       </div>
     </div>
@@ -903,6 +906,8 @@ function updateSessionButtons(status) {
   document.getElementById('dd-restart').style.display = running ? 'block' : 'none';
   document.getElementById('dd-resume').style.display  = running ? 'none'  : 'block';
   document.getElementById('dd-delete').style.display  = running ? 'none'  : 'block';
+  document.getElementById('dd-ctrlc').style.display   = running ? 'block' : 'none';
+  document.getElementById('dd-attach').style.display  = running ? 'block' : 'none';
 }
 
 // fetchSessionStatus fetches live session state from the worker API and
@@ -1057,6 +1062,8 @@ var multiTmpl = template.Must(template.New("multi").Parse(`<!DOCTYPE html>
   --green:#3fb950;--green-dim:rgba(63,185,80,0.15);--red:#f85149;--red-dim:rgba(248,81,73,0.15);
   --amber:#d29922;--text:#e2e8f0;--text-dim:#94a3b8;--text-muted:#8b949e;
   --mono:'JetBrains Mono','SF Mono',monospace;
+  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   font-family:var(--mono);-webkit-font-smoothing:antialiased}
@@ -1064,7 +1071,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 /* layout */
 .multi-layout{display:flex;flex-direction:column;height:100dvh}
 .multi-topbar{flex-shrink:0;display:flex;align-items:center;gap:.6rem;
-  padding:8px 12px;background:rgba(13,17,23,.95);backdrop-filter:blur(20px);
+  padding:calc(var(--sat) + 8px) calc(var(--sar) + 12px) 8px calc(var(--sal) + 12px);
+  background:rgba(13,17,23,.95);backdrop-filter:blur(20px);
   border-bottom:1px solid var(--border);z-index:20}
 .back{color:var(--accent);background:transparent;border:none;font-size:1.4rem;
   cursor:pointer;display:flex;align-items:center;text-decoration:none;
@@ -1109,7 +1117,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 
 /* dropdown items */
 .ditem{display:block;width:100%;text-align:left;background:transparent;border:none;
-  color:var(--text-dim);font-family:var(--mono);font-size:.8rem;padding:.45rem .8rem;
+  color:var(--text-dim);font-family:var(--mono);font-size:.8rem;padding:.5rem .85rem;
   cursor:pointer;transition:background .1s,color .1s}
 .ditem:hover{background:var(--surface);color:var(--text)}
 .ditem.red:hover{color:var(--red)}
@@ -1339,7 +1347,7 @@ function submitPicker() {
   // tear down existing panes before closing so closePicker guard works
   tearDownPanes();
   document.getElementById('picker-ov').classList.remove('show');
-  document.getElementById('pane-grid').innerHTML = '';
+  document.getElementById('pane-grid').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-family:var(--mono);font-size:.85rem">Loading…</div>';
 
   Promise.all(selected.map(function(p) {
     return fetch('/api/workers/' + encodeURIComponent(p.workerID) + '/ws/' + encodeURIComponent(p.sessionName))
